@@ -1,13 +1,45 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
-// ─── Icons (inline SVG components) ───────────────────────────────────────────
+// ─── API Config ─────────────────────────────────────────────────────────
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://padrinho-financas-api.onrender.com";
+
+const api = {
+  getToken: () => (typeof window !== "undefined" ? localStorage.getItem("pf_token") : null),
+  setToken: (t) => localStorage.setItem("pf_token", t),
+  clearToken: () => localStorage.removeItem("pf_token"),
+  headers: () => ({
+    "Content-Type": "application/json",
+    ...(api.getToken() ? { Authorization: `Bearer ${api.getToken()}` } : {}),
+  }),
+  async request(method, path, body) {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: api.headers(),
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro na requisição");
+    return data;
+  },
+  // Auth
+  login: (email, password) => api.request("POST", "/api/auth/login", { email, password }),
+  register: (name, email, password) => api.request("POST", "/api/auth/register", { name, email, password }),
+  me: () => api.request("GET", "/api/auth/me"),
+  // Transactions
+  getTransactions: (month, year) => api.request("GET", `/api/transactions?month=${month}&year=${year}`),
+  createTransaction: (data) => api.request("POST", "/api/transactions", data),
+  updateTransaction: (id, data) => api.request("PUT", `/api/transactions/${id}`, data),
+  deleteTransaction: (id) => api.request("DELETE", `/api/transactions/${id}`),
+  getSummary: (month, year) => api.request("GET", `/api/transactions/summary?month=${month}&year=${year}&months=6`),
+  // Categories
+  getCategories: () => api.request("GET", "/api/categories"),
+};
+
+// ─── Icons ──────────────────────────────────────────────────────────────
 const Icons = {
   Plus: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Trash: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
   Edit: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  Wallet: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>,
-  TrendUp: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  TrendDown: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
   Alert: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Filter: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
   ChevronLeft: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>,
@@ -17,51 +49,17 @@ const Icons = {
   Home: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   List: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
   Chart: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Logout: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  User: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Loader: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
 };
 
-// ─── Constants ──────────────────────────────────────────────────────────
-const CATEGORIES = [
-  { id: "moradia", label: "Moradia", color: "#E8575A" },
-  { id: "alimentacao", label: "Alimentação", color: "#F4A940" },
-  { id: "transporte", label: "Transporte", color: "#3EAFC4" },
-  { id: "lazer", label: "Lazer", color: "#9B6DD7" },
-  { id: "saude", label: "Saúde", color: "#4ACA8B" },
-  { id: "educacao", label: "Educação", color: "#5B8DEF" },
-  { id: "servicos", label: "Serviços", color: "#E87BAF" },
-  { id: "outros", label: "Outros", color: "#8E99A9" },
-];
-
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const fmt = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const catColor = (id) => CATEGORIES.find(c => c.id === id)?.color || "#8E99A9";
-const catLabel = (id) => CATEGORIES.find(c => c.id === id)?.label || id;
-const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const INITIAL_DATA = [
-  { id: 1, type: "receita", description: "Salário", amount: 6500, category: "outros", date: "2026-04-05", fixed: true },
-  { id: 2, type: "receita", description: "Freelance", amount: 1200, category: "outros", date: "2026-04-12", fixed: false },
-  { id: 3, type: "despesa", description: "Aluguel", amount: 1800, category: "moradia", date: "2026-04-01", fixed: true },
-  { id: 4, type: "despesa", description: "Condomínio", amount: 450, category: "moradia", date: "2026-04-01", fixed: true },
-  { id: 5, type: "despesa", description: "Energia", amount: 220, category: "servicos", date: "2026-04-10", fixed: true },
-  { id: 6, type: "despesa", description: "Internet", amount: 120, category: "servicos", date: "2026-04-05", fixed: true },
-  { id: 7, type: "despesa", description: "Supermercado", amount: 890, category: "alimentacao", date: "2026-04-08", fixed: false },
-  { id: 8, type: "despesa", description: "Restaurante", amount: 180, category: "alimentacao", date: "2026-04-15", fixed: false },
-  { id: 9, type: "despesa", description: "Uber/Gasolina", amount: 340, category: "transporte", date: "2026-04-11", fixed: false },
-  { id: 10, type: "despesa", description: "Academia", amount: 130, category: "saude", date: "2026-04-01", fixed: true },
-  { id: 11, type: "despesa", description: "Cinema", amount: 60, category: "lazer", date: "2026-04-20", fixed: false },
-  { id: 12, type: "despesa", description: "Curso Online", amount: 90, category: "educacao", date: "2026-04-03", fixed: true },
-  // March data
-  { id: 13, type: "receita", description: "Salário", amount: 6500, category: "outros", date: "2026-03-05", fixed: true },
-  { id: 14, type: "despesa", description: "Aluguel", amount: 1800, category: "moradia", date: "2026-03-01", fixed: true },
-  { id: 15, type: "despesa", description: "Supermercado", amount: 750, category: "alimentacao", date: "2026-03-10", fixed: false },
-  { id: 16, type: "despesa", description: "Energia", amount: 195, category: "servicos", date: "2026-03-10", fixed: true },
-  { id: 17, type: "despesa", description: "Condomínio", amount: 450, category: "moradia", date: "2026-03-01", fixed: true },
-  { id: 18, type: "despesa", description: "Uber/Gasolina", amount: 280, category: "transporte", date: "2026-03-14", fixed: false },
-];
-
-// ─── Mini Bar Chart (SVG) ───────────────────────────────────────────────
+// ─── Mini Bar Chart ─────────────────────────────────────────────────────
 function MiniBarChart({ data, height = 180 }) {
-  if (!data.length) return <div style={{ color: "#8E99A9", padding: 20, textAlign: "center", fontSize: 13 }}>Sem dados para exibir</div>;
+  if (!data || !data.length) return <div style={{ color: "#8E99A9", padding: 20, textAlign: "center", fontSize: 13 }}>Sem dados para exibir</div>;
   const max = Math.max(...data.map(d => Math.max(d.receita, d.despesa)), 1);
   const barW = Math.min(28, Math.floor(260 / data.length));
   const gap = Math.min(16, Math.floor(80 / data.length));
@@ -84,7 +82,7 @@ function MiniBarChart({ data, height = 180 }) {
   );
 }
 
-// ─── Donut Chart (SVG) ──────────────────────────────────────────────────
+// ─── Donut Chart ────────────────────────────────────────────────────────
 function DonutChart({ slices, size = 160 }) {
   const total = slices.reduce((s, sl) => s + sl.value, 0);
   if (!total) return <div style={{ color: "#8E99A9", padding: 20, textAlign: "center", fontSize: 13 }}>Sem despesas</div>;
@@ -103,15 +101,7 @@ function DonutChart({ slices, size = 160 }) {
     const y1 = cy + r * Math.sin(startAngle * rad);
     const x2 = cx + r * Math.cos(endAngle * rad);
     const y2 = cy + r * Math.sin(endAngle * rad);
-    return (
-      <path
-        key={sl.id}
-        d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`}
-        fill={sl.color}
-        stroke="#1A1D23"
-        strokeWidth="2"
-      />
-    );
+    return <path key={sl.id} d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`} fill={sl.color} stroke="#1A1D23" strokeWidth="2" />;
   });
   return (
     <svg viewBox={`0 0 ${size} ${size}`} style={{ width: size, height: size }}>
@@ -123,18 +113,12 @@ function DonutChart({ slices, size = 160 }) {
   );
 }
 
-// ─── Modal Component ────────────────────────────────────────────────────
+// ─── Modal ──────────────────────────────────────────────────────────────
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", padding: 16,
-    }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: "#1E2128", borderRadius: 16, padding: "28px 28px 20px", width: "100%", maxWidth: 440,
-        border: "1px solid #2A2E37", boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
-      }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", padding: 16 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#1E2128", borderRadius: 16, padding: "28px 28px 20px", width: "100%", maxWidth: 440, border: "1px solid #2A2E37", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#F0F2F5" }}>{title}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#8E99A9", cursor: "pointer", padding: 4 }}><Icons.Close /></button>
@@ -145,123 +129,229 @@ function Modal({ open, onClose, title, children }) {
   );
 }
 
-// ─── Main App ───────────────────────────────────────────────────────────
+// ─── Login/Register Screen ──────────────────────────────────────────────
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      let result;
+      if (mode === "login") {
+        result = await api.login(email, password);
+      } else {
+        result = await api.register(name, email, password);
+      }
+      api.setToken(result.token);
+      onAuth(result.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const s = {
+    container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#13151A", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", padding: 16 },
+    card: { background: "#1E2128", borderRadius: 20, padding: "40px 32px", width: "100%", maxWidth: 400, border: "1px solid #2A2E37", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" },
+    logo: { fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 8, background: "linear-gradient(135deg, #F4A940, #E8575A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    subtitle: { fontSize: 14, color: "#8E99A9", textAlign: "center", marginBottom: 28 },
+    input: { background: "#252830", border: "1px solid #2A2E37", borderRadius: 10, padding: "12px 14px", color: "#F0F2F5", fontSize: 14, width: "100%", outline: "none", boxSizing: "border-box", marginBottom: 12 },
+    btn: { background: "linear-gradient(135deg, #4ACA8B, #3EAFC4)", border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
+    toggle: { background: "none", border: "none", color: "#3EAFC4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 16, textAlign: "center", width: "100%" },
+    error: { background: "#E8575A18", border: "1px solid #E8575A44", borderRadius: 10, padding: "10px 14px", color: "#E8575A", fontSize: 13, marginBottom: 12 },
+  };
+
+  return (
+    <div style={s.container}>
+      <div style={s.card}>
+        <div style={s.logo}>Padrinho Finanças</div>
+        <div style={s.subtitle}>{mode === "login" ? "Acesse sua conta" : "Crie sua conta"}</div>
+        {error && <div style={s.error}>{error}</div>}
+        {mode === "register" && (
+          <input style={s.input} placeholder="Seu nome" value={name} onChange={e => setName(e.target.value)} />
+        )}
+        <input style={s.input} placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input style={s.input} placeholder="Senha" type="password" value={password} onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+        <button style={{ ...s.btn, opacity: loading ? 0.7 : 1 }} onClick={handleSubmit} disabled={loading}>
+          {loading ? <Icons.Loader /> : (mode === "login" ? "Entrar" : "Cadastrar")}
+        </button>
+        <button style={s.toggle} onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>
+          {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Faça login"}
+        </button>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+// ─── Main Dashboard ─────────────────────────────────────────────────────
 export default function FinanceDashboard() {
-  const [transactions, setTransactions] = useState(INITIAL_DATA);
-  const [currentMonth, setCurrentMonth] = useState(3); // April = index 3 (0-based)
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [filterCat, setFilterCat] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ type: "despesa", description: "", amount: "", category_id: "", date: "", is_fixed: false });
 
-  // Form state
-  const [form, setForm] = useState({ type: "despesa", description: "", amount: "", category: "outros", date: "", fixed: false });
+  // ── Check auth on mount ──
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = api.getToken();
+      if (token) {
+        try {
+          const data = await api.me();
+          setUser(data.user);
+        } catch { api.clearToken(); }
+      }
+      setAuthChecked(true);
+    };
+    checkAuth();
+  }, []);
 
-  const resetForm = () => setForm({ type: "despesa", description: "", amount: "", category: "outros", date: `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-01`, fixed: false });
-
-  const openNew = () => { resetForm(); setEditingTx(null); setShowModal(true); };
-  const openEdit = (tx) => { setForm({ ...tx, amount: String(tx.amount) }); setEditingTx(tx.id); setShowModal(true); };
-
-  const save = () => {
-    if (!form.description || !form.amount || !form.date) return;
-    const entry = { ...form, amount: parseFloat(form.amount) };
-    if (editingTx) {
-      setTransactions(prev => prev.map(t => t.id === editingTx ? { ...entry, id: editingTx } : t));
-    } else {
-      setTransactions(prev => [...prev, { ...entry, id: Date.now() }]);
+  // ── Fetch data when month/user changes ──
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [txData, sumData, catData] = await Promise.all([
+        api.getTransactions(currentMonth, currentYear),
+        api.getSummary(currentMonth, currentYear),
+        api.getCategories(),
+      ]);
+      setTransactions(txData.transactions || []);
+      setSummary(sumData);
+      setCategories(catData.categories || []);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setShowModal(false);
+  }, [user, currentMonth, currentYear]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Handlers ──
+  const handleAuth = (u) => { setUser(u); };
+  const handleLogout = () => { api.clearToken(); setUser(null); setTransactions([]); setSummary(null); };
+
+  const resetForm = () => setForm({ type: "despesa", description: "", amount: "", category_id: categories.length ? String(categories[0].id) : "", date: `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`, is_fixed: false });
+  const openNew = () => { resetForm(); setEditingTx(null); setShowModal(true); };
+  const openEdit = (tx) => {
+    setForm({ type: tx.type, description: tx.description, amount: String(tx.amount), category_id: String(tx.category_id || ""), date: tx.date?.split("T")[0] || "", is_fixed: tx.is_fixed });
+    setEditingTx(tx.id);
+    setShowModal(true);
   };
 
-  const remove = (id) => setTransactions(prev => prev.filter(t => t.id !== id));
-
-  // Filtered data for current month
-  const monthTxs = useMemo(() => transactions.filter(t => {
-    const d = new Date(t.date + "T00:00:00");
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }), [transactions, currentMonth, currentYear]);
-
-  const filteredTxs = useMemo(() => monthTxs.filter(t => {
-    if (filterCat !== "all" && t.category !== filterCat) return false;
-    if (filterType !== "all" && t.type !== filterType) return false;
-    return true;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date)), [monthTxs, filterCat, filterType]);
-
-  const totalReceita = useMemo(() => monthTxs.filter(t => t.type === "receita").reduce((s, t) => s + t.amount, 0), [monthTxs]);
-  const totalDespesa = useMemo(() => monthTxs.filter(t => t.type === "despesa").reduce((s, t) => s + t.amount, 0), [monthTxs]);
-  const saldo = totalReceita - totalDespesa;
-  const overBudget = totalDespesa > totalReceita;
-
-  // Category breakdown for current month
-  const catBreakdown = useMemo(() =>
-    CATEGORIES.map(c => ({
-      ...c,
-      value: monthTxs.filter(t => t.type === "despesa" && t.category === c.id).reduce((s, t) => s + t.amount, 0),
-    })).filter(c => c.value > 0).sort((a, b) => b.value - a.value)
-  , [monthTxs]);
-
-  // Last 6 months comparison
-  const monthComparison = useMemo(() => {
-    const result = [];
-    for (let i = 5; i >= 0; i--) {
-      let m = currentMonth - i;
-      let y = currentYear;
-      if (m < 0) { m += 12; y -= 1; }
-      const txs = transactions.filter(t => { const d = new Date(t.date + "T00:00:00"); return d.getMonth() === m && d.getFullYear() === y; });
-      result.push({
-        label: MONTHS[m],
-        receita: txs.filter(t => t.type === "receita").reduce((s, t) => s + t.amount, 0),
-        despesa: txs.filter(t => t.type === "despesa").reduce((s, t) => s + t.amount, 0),
-      });
+  const save = async () => {
+    if (!form.description || !form.amount || !form.date) return;
+    setLoading(true);
+    try {
+      const payload = { ...form, amount: parseFloat(form.amount), category_id: form.category_id ? parseInt(form.category_id) : null };
+      if (editingTx) {
+        await api.updateTransaction(editingTx, payload);
+      } else {
+        await api.createTransaction(payload);
+      }
+      setShowModal(false);
+      await fetchData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    return result;
-  }, [transactions, currentMonth, currentYear]);
+  };
 
-  // Smart tips
-  const tips = useMemo(() => {
-    const t = [];
-    if (catBreakdown.length > 0) {
-      const top = catBreakdown[0];
-      t.push(`Sua maior despesa é ${top.label} (${fmt(top.value)}). Avalie se há como reduzir.`);
+  const remove = async (id) => {
+    setLoading(true);
+    try {
+      await api.deleteTransaction(id);
+      await fetchData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    const fixedTotal = monthTxs.filter(tx => tx.type === "despesa" && tx.fixed).reduce((s, tx) => s + tx.amount, 0);
-    if (fixedTotal > totalReceita * 0.5) {
-      t.push(`Contas fixas representam ${Math.round(fixedTotal / totalReceita * 100)}% da receita. Tente renegociar contratos.`);
-    }
-    if (saldo > 0 && totalReceita > 0) {
-      t.push(`Você economizou ${Math.round(saldo / totalReceita * 100)}% da receita. ${saldo / totalReceita > 0.2 ? "Ótimo trabalho!" : "Tente chegar a 20%."}`);
-    }
-    if (overBudget) {
-      t.push("⚠️ Gastos acima da receita! Priorize cortes em despesas variáveis.");
-    }
-    return t;
-  }, [catBreakdown, monthTxs, totalReceita, totalDespesa, saldo, overBudget]);
-
-  // Previous month comparison
-  const prevMonth = useMemo(() => {
-    let m = currentMonth - 1, y = currentYear;
-    if (m < 0) { m = 11; y -= 1; }
-    const txs = transactions.filter(t => { const d = new Date(t.date + "T00:00:00"); return d.getMonth() === m && d.getFullYear() === y; });
-    return txs.filter(t => t.type === "despesa").reduce((s, t) => s + t.amount, 0);
-  }, [transactions, currentMonth, currentYear]);
-
-  const despesaDiff = prevMonth > 0 ? ((totalDespesa - prevMonth) / prevMonth * 100) : 0;
+  };
 
   const navigateMonth = (dir) => {
     let m = currentMonth + dir, y = currentYear;
-    if (m > 11) { m = 0; y += 1; }
-    if (m < 0) { m = 11; y -= 1; }
+    if (m > 12) { m = 1; y += 1; }
+    if (m < 1) { m = 12; y -= 1; }
     setCurrentMonth(m);
     setCurrentYear(y);
   };
+
+  // ── Derived data ──
+  const totalReceita = summary?.current_month?.receita || 0;
+  const totalDespesa = summary?.current_month?.despesa || 0;
+  const saldo = summary?.current_month?.saldo || 0;
+  const overBudget = summary?.current_month?.over_budget || false;
+  const catBreakdown = (summary?.category_breakdown || []).map(c => ({ id: c.id, label: c.name, color: c.color, value: c.total }));
+  const monthComparison = (summary?.monthly_comparison || []).map(m => ({ label: MONTHS[m.month - 1], receita: m.receita, despesa: m.despesa }));
+
+  const filteredTxs = useMemo(() => transactions.filter(t => {
+    if (filterCat !== "all" && String(t.category_id) !== filterCat) return false;
+    if (filterType !== "all" && t.type !== filterType) return false;
+    return true;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date)), [transactions, filterCat, filterType]);
+
+  // Previous month comparison
+  const prevMonthDespesa = useMemo(() => {
+    if (!summary?.monthly_comparison || summary.monthly_comparison.length < 2) return 0;
+    const prev = summary.monthly_comparison[summary.monthly_comparison.length - 2];
+    return prev?.despesa || 0;
+  }, [summary]);
+  const despesaDiff = prevMonthDespesa > 0 ? ((totalDespesa - prevMonthDespesa) / prevMonthDespesa * 100) : 0;
+
+  // Tips
+  const tips = useMemo(() => {
+    const t = [];
+    if (catBreakdown.length > 0) t.push(`Sua maior despesa é ${catBreakdown[0].label} (${fmt(catBreakdown[0].value)}). Avalie se há como reduzir.`);
+    if (totalReceita > 0) {
+      const fixedTotal = transactions.filter(tx => tx.type === "despesa" && tx.is_fixed).reduce((s, tx) => s + parseFloat(tx.amount), 0);
+      if (fixedTotal > totalReceita * 0.5) t.push(`Contas fixas representam ${Math.round(fixedTotal / totalReceita * 100)}% da receita. Tente renegociar.`);
+      if (saldo > 0) t.push(`Você economizou ${Math.round(saldo / totalReceita * 100)}% da receita. ${saldo / totalReceita > 0.2 ? "Ótimo trabalho!" : "Tente chegar a 20%."}`);
+    }
+    if (overBudget) t.push("⚠️ Gastos acima da receita! Priorize cortes em despesas variáveis.");
+    return t;
+  }, [catBreakdown, transactions, totalReceita, saldo, overBudget]);
+
+  // ── Auth gate ──
+  if (!authChecked) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#13151A", color: "#8E99A9" }}>
+      <Icons.Loader />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (!user) return <AuthScreen onAuth={handleAuth} />;
 
   // ── Styles ──
   const s = {
     app: { fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#13151A", color: "#F0F2F5", minHeight: "100vh", maxWidth: 1200, margin: "0 auto", padding: "0 16px 100px" },
     header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0 12px", flexWrap: "wrap", gap: 12 },
-    logo: { fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", background: "linear-gradient(135deg, #4ACA8B, #3EAFC4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    logo: { fontSize: 20, fontWeight: 800, letterSpacing: "-0.3px", background: "linear-gradient(135deg, #F4A940, #E8575A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    headerRight: { display: "flex", alignItems: "center", gap: 10 },
+    userBadge: { display: "flex", alignItems: "center", gap: 6, background: "#252830", borderRadius: 10, padding: "6px 12px", fontSize: 13, color: "#CDD2DA" },
+    logoutBtn: { background: "none", border: "1px solid #2A2E37", borderRadius: 10, padding: "8px 10px", color: "#8E99A9", cursor: "pointer", display: "flex", alignItems: "center" },
     monthNav: { display: "flex", alignItems: "center", gap: 8, background: "#1E2128", borderRadius: 12, padding: "6px 12px", border: "1px solid #2A2E37" },
     monthLabel: { fontSize: 15, fontWeight: 600, minWidth: 110, textAlign: "center", color: "#F0F2F5" },
     navBtn: { background: "none", border: "none", color: "#8E99A9", cursor: "pointer", padding: 4, display: "flex", borderRadius: 8 },
@@ -271,7 +361,7 @@ export default function FinanceDashboard() {
     kpi: (accent) => ({ background: "#1E2128", borderRadius: 14, padding: "18px 20px", border: "1px solid #2A2E37", borderLeft: `4px solid ${accent}` }),
     kpiLabel: { fontSize: 12, fontWeight: 500, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 },
     kpiValue: { fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" },
-    chartsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 16, marginBottom: 16 },
+    chartsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 16 },
     sectionTitle: { fontSize: 14, fontWeight: 700, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 },
     txRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderRadius: 12, background: "#252830", marginBottom: 6, gap: 12 },
     tag: (color) => ({ background: color + "22", color: color, fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }),
@@ -282,40 +372,35 @@ export default function FinanceDashboard() {
     bottomNav: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#1A1D23", borderTop: "1px solid #2A2E37", display: "flex", justifyContent: "center", gap: 0, padding: "8px 0", zIndex: 900 },
     bottomTab: (active) => ({ background: "none", border: "none", color: active ? "#4ACA8B" : "#5A6070", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", padding: "6px 24px", fontSize: 11, fontWeight: active ? 700 : 500 }),
     tipCard: { background: "#252830", borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#CDD2DA", lineHeight: 1.5 },
+    loadingOverlay: { position: "fixed", inset: 0, background: "rgba(19,21,26,0.5)", zIndex: 950, display: "flex", alignItems: "center", justifyContent: "center" },
   };
 
-  // ─── RENDER ───────────────────────────────────────────────────────────
   return (
     <div style={s.app}>
-      <style>{`
-        @media (max-width: 480px) {
-          .finan-bottom-tab { padding: 6px 10px !important; }
-          .finan-bottom-tab span { font-size: 10px !important; }
-          .finan-tx-row { padding: 10px 10px !important; gap: 6px !important; }
-          .finan-tx-tag { display: none !important; }
-          .finan-analytics-row { flex-wrap: wrap !important; gap: 8px !important; }
-          .finan-analytics-bar { flex: 1 1 100% !important; order: 10; }
-          .finan-analytics-pct { display: none !important; }
-          .finan-analytics-amount { min-width: 64px !important; font-size: 12px !important; }
-          .finan-kpi-value { font-size: 20px !important; }
-          .finan-charts-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 360px) {
-          .finan-bottom-tab { padding: 6px 6px !important; }
-          .finan-header { gap: 8px !important; }
-          .finan-add-btn { padding: 8px 12px !important; font-size: 13px !important; }
-        }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
       {/* HEADER */}
-      <div style={s.header} className="finan-header">
-        <div style={s.logo}>FinanZen</div>
+      <div style={s.header}>
+        <div style={s.logo}>Padrinho Finanças</div>
         <div style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
-          <span style={s.monthLabel}>{MONTHS[currentMonth]} {currentYear}</span>
+          <span style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
           <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
         </div>
-        <button style={s.addBtn} className="finan-add-btn" onClick={openNew}><Icons.Plus /> Novo</button>
+        <div style={s.headerRight}>
+          <div style={s.userBadge}><Icons.User /> {user.name?.split(" ")[0]}</div>
+          <button style={s.logoutBtn} onClick={handleLogout} title="Sair"><Icons.Logout /></button>
+          <button style={s.addBtn} onClick={openNew}><Icons.Plus /> Novo</button>
+        </div>
       </div>
+
+      {/* ERROR */}
+      {error && (
+        <div style={{ background: "#E8575A18", border: "1px solid #E8575A44", borderRadius: 12, padding: "10px 16px", marginBottom: 12, color: "#E8575A", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {error}
+          <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#E8575A", cursor: "pointer" }}><Icons.Close /></button>
+        </div>
+      )}
 
       {/* ALERT */}
       {overBudget && (
@@ -327,16 +412,15 @@ export default function FinanceDashboard() {
       {/* ═══════ DASHBOARD ═══════ */}
       {activeTab === "dashboard" && (
         <>
-          {/* KPIs */}
           <div style={s.kpiGrid}>
             <div style={s.kpi("#4ACA8B")}>
               <div style={s.kpiLabel}>Receita</div>
-              <div style={{ ...s.kpiValue, color: "#4ACA8B" }} className="finan-kpi-value">{fmt(totalReceita)}</div>
+              <div style={{ ...s.kpiValue, color: "#4ACA8B" }}>{fmt(totalReceita)}</div>
             </div>
             <div style={s.kpi("#E8575A")}>
               <div style={s.kpiLabel}>Despesas</div>
-              <div style={{ ...s.kpiValue, color: "#E8575A" }} className="finan-kpi-value">{fmt(totalDespesa)}</div>
-              {prevMonth > 0 && (
+              <div style={{ ...s.kpiValue, color: "#E8575A" }}>{fmt(totalDespesa)}</div>
+              {prevMonthDespesa > 0 && (
                 <div style={{ fontSize: 12, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#4ACA8B" }}>
                   {despesaDiff > 0 ? "▲" : "▼"} {Math.abs(despesaDiff).toFixed(1)}% vs mês anterior
                 </div>
@@ -344,12 +428,11 @@ export default function FinanceDashboard() {
             </div>
             <div style={s.kpi(saldo >= 0 ? "#3EAFC4" : "#E8575A")}>
               <div style={s.kpiLabel}>Saldo</div>
-              <div style={{ ...s.kpiValue, color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }} className="finan-kpi-value">{fmt(saldo)}</div>
+              <div style={{ ...s.kpiValue, color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }}>{fmt(saldo)}</div>
             </div>
           </div>
 
-          {/* CHARTS */}
-          <div style={s.chartsGrid} className="finan-charts-grid">
+          <div style={s.chartsGrid}>
             <div style={s.card}>
               <div style={s.sectionTitle}>Últimos 6 meses</div>
               <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 12 }}>
@@ -377,7 +460,6 @@ export default function FinanceDashboard() {
             </div>
           </div>
 
-          {/* TIPS */}
           {tips.length > 0 && (
             <div style={{ ...s.card, marginBottom: 16 }}>
               <div style={s.sectionTitle}><Icons.Bulb /> Sugestões Inteligentes</div>
@@ -390,21 +472,21 @@ export default function FinanceDashboard() {
             </div>
           )}
 
-          {/* RECENT TXS */}
           <div style={s.card}>
             <div style={s.sectionTitle}>Últimas Transações</div>
-            {monthTxs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map(tx => (
-              <div key={tx.id} style={s.txRow} className="finan-tx-row">
+            {transactions.length === 0 && <div style={{ color: "#8E99A9", padding: 20, textAlign: "center" }}>Nenhuma transação neste mês. Clique em "Novo" para começar!</div>}
+            {transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map(tx => (
+              <div key={tx.id} style={s.txRow}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
-                    <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T00:00:00").toLocaleDateString("pt-BR")}</div>
+                    <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
-                <span style={s.tag(catColor(tx.category))} className="finan-tx-tag">{catLabel(tx.category)}</span>
+                {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
                 <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap" }}>
-                  {tx.type === "receita" ? "+" : "-"}{fmt(tx.amount)}
+                  {tx.type === "receita" ? "+" : "-"}{fmt(parseFloat(tx.amount))}
                 </span>
               </div>
             ))}
@@ -412,10 +494,10 @@ export default function FinanceDashboard() {
         </>
       )}
 
-      {/* ═══════ TRANSACTIONS TAB ═══════ */}
+      {/* ═══════ TRANSACTIONS ═══════ */}
       {activeTab === "transactions" && (
         <div style={s.card}>
-          <div style={s.sectionTitle}>Transações — {MONTHS[currentMonth]} {currentYear}</div>
+          <div style={s.sectionTitle}>Transações — {MONTHS[currentMonth - 1]} {currentYear}</div>
           <div style={s.filterBar}>
             <Icons.Filter />
             <select style={s.select} value={filterType} onChange={e => setFilterType(e.target.value)}>
@@ -425,27 +507,27 @@ export default function FinanceDashboard() {
             </select>
             <select style={s.select} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value="all">Todas categorias</option>
-              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
             </select>
           </div>
           {filteredTxs.length === 0 && <div style={{ color: "#8E99A9", padding: 30, textAlign: "center" }}>Nenhuma transação encontrada.</div>}
           {filteredTxs.map(tx => (
-            <div key={tx.id} style={s.txRow} className="finan-tx-row">
+            <div key={tx.id} style={s.txRow}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tx.description}
-                    {tx.fixed && <span style={{ ...s.badge, background: "#3EAFC422", color: "#3EAFC4", marginLeft: 8 }}>Fixa</span>}
+                    {tx.is_fixed && <span style={{ ...s.badge, background: "#3EAFC422", color: "#3EAFC4", marginLeft: 8 }}>Fixa</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T00:00:00").toLocaleDateString("pt-BR")}</div>
+                  <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                 </div>
               </div>
-              <span style={s.tag(catColor(tx.category))} className="finan-tx-tag">{catLabel(tx.category)}</span>
+              {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
               <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
-                {tx.type === "receita" ? "+" : "-"}{fmt(tx.amount)}
+                {tx.type === "receita" ? "+" : "-"}{fmt(parseFloat(tx.amount))}
               </span>
-              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              <div style={{ display: "flex", gap: 4 }}>
                 <button onClick={() => openEdit(tx)} style={{ background: "none", border: "none", color: "#5B8DEF", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Edit /></button>
                 <button onClick={() => remove(tx.id)} style={{ background: "none", border: "none", color: "#E8575A88", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Trash /></button>
               </div>
@@ -454,10 +536,10 @@ export default function FinanceDashboard() {
         </div>
       )}
 
-      {/* ═══════ ANALYTICS TAB ═══════ */}
+      {/* ═══════ ANALYTICS ═══════ */}
       {activeTab === "analytics" && (
         <>
-          <div style={s.chartsGrid} className="finan-charts-grid">
+          <div style={s.chartsGrid}>
             <div style={s.card}>
               <div style={s.sectionTitle}>Evolução 6 Meses</div>
               <MiniBarChart data={monthComparison} height={200} />
@@ -471,18 +553,19 @@ export default function FinanceDashboard() {
           </div>
           <div style={s.card}>
             <div style={s.sectionTitle}>Ranking de Categorias</div>
+            {catBreakdown.length === 0 && <div style={{ color: "#8E99A9", padding: 20, textAlign: "center" }}>Sem despesas neste mês.</div>}
             {catBreakdown.map((c, i) => {
               const pct = totalDespesa > 0 ? (c.value / totalDespesa * 100) : 0;
               return (
-                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }} className="finan-analytics-row">
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#5A6070", width: 24, flexShrink: 0 }}>{i + 1}</span>
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#5A6070", width: 24 }}>{i + 1}</span>
                   <span style={{ width: 12, height: 12, borderRadius: 3, background: c.color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 60 }}>{c.label}</span>
-                  <div style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }} className="finan-analytics-bar">
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{c.label}</span>
+                  <div style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: c.color, borderRadius: 6, transition: "width 0.5s ease" }} />
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }} className="finan-analytics-amount">{fmt(c.value)}</span>
-                  <span style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }} className="finan-analytics-pct">{pct.toFixed(0)}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }}>{fmt(c.value)}</span>
+                  <span style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }}>{pct.toFixed(0)}%</span>
                 </div>
               );
             })}
@@ -492,15 +575,9 @@ export default function FinanceDashboard() {
 
       {/* BOTTOM NAV */}
       <div style={s.bottomNav}>
-        <button style={s.bottomTab(activeTab === "dashboard")} className="finan-bottom-tab" onClick={() => setActiveTab("dashboard")}>
-          <Icons.Home /><span>Dashboard</span>
-        </button>
-        <button style={s.bottomTab(activeTab === "transactions")} className="finan-bottom-tab" onClick={() => setActiveTab("transactions")}>
-          <Icons.List /><span>Transações</span>
-        </button>
-        <button style={s.bottomTab(activeTab === "analytics")} className="finan-bottom-tab" onClick={() => setActiveTab("analytics")}>
-          <Icons.Chart /><span>Análises</span>
-        </button>
+        <button style={s.bottomTab(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
+        <button style={s.bottomTab(activeTab === "transactions")} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
+        <button style={s.bottomTab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
       </div>
 
       {/* MODAL */}
@@ -521,19 +598,27 @@ export default function FinanceDashboard() {
           </div>
           <input style={s.input} placeholder="Descrição" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
           <input style={s.input} placeholder="Valor" type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
-          <select style={{ ...s.input }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          <select style={s.input} value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}>
+            <option value="">Selecione a categoria</option>
+            {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
           </select>
           <input style={s.input} type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#CDD2DA", cursor: "pointer" }}>
-            <input type="checkbox" checked={form.fixed} onChange={e => setForm(f => ({ ...f, fixed: e.target.checked }))} style={{ accentColor: "#3EAFC4" }} />
+            <input type="checkbox" checked={form.is_fixed} onChange={e => setForm(f => ({ ...f, is_fixed: e.target.checked }))} style={{ accentColor: "#3EAFC4" }} />
             Conta fixa (recorrente)
           </label>
-          <button onClick={save} style={{ ...s.addBtn, justifyContent: "center", padding: "14px", marginTop: 4, borderRadius: 12, fontSize: 15, width: "100%" }}>
-            {editingTx ? "Salvar Alterações" : "Adicionar"}
+          <button onClick={save} disabled={loading} style={{ ...s.addBtn, justifyContent: "center", padding: "14px", marginTop: 4, borderRadius: 12, fontSize: 15, width: "100%", opacity: loading ? 0.7 : 1 }}>
+            {loading ? <Icons.Loader /> : (editingTx ? "Salvar Alterações" : "Adicionar")}
           </button>
         </div>
       </Modal>
+
+      {/* LOADING OVERLAY */}
+      {loading && (
+        <div style={s.loadingOverlay}>
+          <Icons.Loader />
+        </div>
+      )}
     </div>
   );
 }
