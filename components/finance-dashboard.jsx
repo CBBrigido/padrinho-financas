@@ -346,7 +346,7 @@ export default function FinanceDashboard() {
 
   // ── Styles ──
   const s = {
-    app: { fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#13151A", color: "#F0F2F5", minHeight: "100vh", maxWidth: 1200, margin: "0 auto", padding: "0 16px 100px" },
+    app: { fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#13151A", color: "#F0F2F5", minHeight: "100vh", maxWidth: 1200, margin: "0 auto", padding: "0 16px 24px" },
     header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0 12px", flexWrap: "wrap", gap: 12 },
     logo: { fontSize: 20, fontWeight: 800, letterSpacing: "-0.3px", background: "linear-gradient(135deg, #F4A940, #E8575A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
     headerRight: { display: "flex", alignItems: "center", gap: 10 },
@@ -376,8 +376,70 @@ export default function FinanceDashboard() {
   };
 
   return (
-    <div style={s.app}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div className="pf-outer" style={{ background: "#13151A", minHeight: "100vh", display: "flex", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: "#F0F2F5" }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pf-sidebar { display: none; }
+        .pf-main { padding-bottom: 100px; }
+        @media (min-width: 768px) {
+          .pf-sidebar {
+            display: flex;
+            flex-direction: column;
+            width: 220px;
+            min-height: 100vh;
+            background: #1A1D23;
+            border-right: 1px solid #2A2E37;
+            padding: 24px 16px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            flex-shrink: 0;
+            box-sizing: border-box;
+          }
+          .pf-sidebar-logo {
+            font-size: 18px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #F4A940, #E8575A);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 32px;
+            padding: 0 8px;
+          }
+          .pf-sidebar-btn {
+            background: none;
+            border: none;
+            color: #5A6070;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 10px;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 4px;
+            font-family: inherit;
+            transition: background 0.15s, color 0.15s;
+          }
+          .pf-sidebar-btn:hover { background: #252830; color: #CDD2DA; }
+          .pf-sidebar-btn.active { background: #252830; color: #4ACA8B; font-weight: 700; }
+          .pf-bottom-nav { display: none !important; }
+          .pf-main { padding-bottom: 24px; flex: 1; min-width: 0; }
+        }
+      `}</style>
+
+      {/* SIDEBAR — desktop only */}
+      <nav className="pf-sidebar">
+        <div className="pf-sidebar-logo">Padrinho Finanças</div>
+        <button className={`pf-sidebar-btn${activeTab === "dashboard" ? " active" : ""}`} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
+        <button className={`pf-sidebar-btn${activeTab === "transactions" ? " active" : ""}`} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
+        <button className={`pf-sidebar-btn${activeTab === "analytics" ? " active" : ""}`} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
+        <button className="pf-sidebar-btn" style={{ marginTop: "auto", color: "#8E99A9" }} onClick={handleLogout}><Icons.Logout /> Sair</button>
+      </nav>
+
+      <div className="pf-main" style={s.app}>
 
       {/* HEADER */}
       <div style={s.header}>
@@ -574,7 +636,7 @@ export default function FinanceDashboard() {
       )}
 
       {/* BOTTOM NAV */}
-      <div style={s.bottomNav}>
+      <div className="pf-bottom-nav" style={s.bottomNav}>
         <button style={s.bottomTab(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
         <button style={s.bottomTab(activeTab === "transactions")} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
         <button style={s.bottomTab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
@@ -619,6 +681,7 @@ export default function FinanceDashboard() {
           <Icons.Loader />
         </div>
       )}
+      </div>
     </div>
   );
 }
