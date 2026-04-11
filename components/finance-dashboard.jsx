@@ -271,7 +271,7 @@ export default function FinanceDashboard() {
     kpi: (accent) => ({ background: "#1E2128", borderRadius: 14, padding: "18px 20px", border: "1px solid #2A2E37", borderLeft: `4px solid ${accent}` }),
     kpiLabel: { fontSize: 12, fontWeight: 500, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 },
     kpiValue: { fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" },
-    chartsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 16 },
+    chartsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 16, marginBottom: 16 },
     sectionTitle: { fontSize: 14, fontWeight: 700, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 },
     txRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderRadius: 12, background: "#252830", marginBottom: 6, gap: 12 },
     tag: (color) => ({ background: color + "22", color: color, fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }),
@@ -287,15 +287,34 @@ export default function FinanceDashboard() {
   // ─── RENDER ───────────────────────────────────────────────────────────
   return (
     <div style={s.app}>
+      <style>{`
+        @media (max-width: 480px) {
+          .finan-bottom-tab { padding: 6px 10px !important; }
+          .finan-bottom-tab span { font-size: 10px !important; }
+          .finan-tx-row { padding: 10px 10px !important; gap: 6px !important; }
+          .finan-tx-tag { display: none !important; }
+          .finan-analytics-row { flex-wrap: wrap !important; gap: 8px !important; }
+          .finan-analytics-bar { flex: 1 1 100% !important; order: 10; }
+          .finan-analytics-pct { display: none !important; }
+          .finan-analytics-amount { min-width: 64px !important; font-size: 12px !important; }
+          .finan-kpi-value { font-size: 20px !important; }
+          .finan-charts-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 360px) {
+          .finan-bottom-tab { padding: 6px 6px !important; }
+          .finan-header { gap: 8px !important; }
+          .finan-add-btn { padding: 8px 12px !important; font-size: 13px !important; }
+        }
+      `}</style>
       {/* HEADER */}
-      <div style={s.header}>
+      <div style={s.header} className="finan-header">
         <div style={s.logo}>FinanZen</div>
         <div style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
           <span style={s.monthLabel}>{MONTHS[currentMonth]} {currentYear}</span>
           <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
         </div>
-        <button style={s.addBtn} onClick={openNew}><Icons.Plus /> Novo</button>
+        <button style={s.addBtn} className="finan-add-btn" onClick={openNew}><Icons.Plus /> Novo</button>
       </div>
 
       {/* ALERT */}
@@ -312,11 +331,11 @@ export default function FinanceDashboard() {
           <div style={s.kpiGrid}>
             <div style={s.kpi("#4ACA8B")}>
               <div style={s.kpiLabel}>Receita</div>
-              <div style={{ ...s.kpiValue, color: "#4ACA8B" }}>{fmt(totalReceita)}</div>
+              <div style={{ ...s.kpiValue, color: "#4ACA8B" }} className="finan-kpi-value">{fmt(totalReceita)}</div>
             </div>
             <div style={s.kpi("#E8575A")}>
               <div style={s.kpiLabel}>Despesas</div>
-              <div style={{ ...s.kpiValue, color: "#E8575A" }}>{fmt(totalDespesa)}</div>
+              <div style={{ ...s.kpiValue, color: "#E8575A" }} className="finan-kpi-value">{fmt(totalDespesa)}</div>
               {prevMonth > 0 && (
                 <div style={{ fontSize: 12, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#4ACA8B" }}>
                   {despesaDiff > 0 ? "▲" : "▼"} {Math.abs(despesaDiff).toFixed(1)}% vs mês anterior
@@ -325,12 +344,12 @@ export default function FinanceDashboard() {
             </div>
             <div style={s.kpi(saldo >= 0 ? "#3EAFC4" : "#E8575A")}>
               <div style={s.kpiLabel}>Saldo</div>
-              <div style={{ ...s.kpiValue, color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }}>{fmt(saldo)}</div>
+              <div style={{ ...s.kpiValue, color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }} className="finan-kpi-value">{fmt(saldo)}</div>
             </div>
           </div>
 
           {/* CHARTS */}
-          <div style={s.chartsGrid}>
+          <div style={s.chartsGrid} className="finan-charts-grid">
             <div style={s.card}>
               <div style={s.sectionTitle}>Últimos 6 meses</div>
               <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 12 }}>
@@ -375,7 +394,7 @@ export default function FinanceDashboard() {
           <div style={s.card}>
             <div style={s.sectionTitle}>Últimas Transações</div>
             {monthTxs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map(tx => (
-              <div key={tx.id} style={s.txRow}>
+              <div key={tx.id} style={s.txRow} className="finan-tx-row">
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
@@ -383,7 +402,7 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T00:00:00").toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
-                <span style={s.tag(catColor(tx.category))}>{catLabel(tx.category)}</span>
+                <span style={s.tag(catColor(tx.category))} className="finan-tx-tag">{catLabel(tx.category)}</span>
                 <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap" }}>
                   {tx.type === "receita" ? "+" : "-"}{fmt(tx.amount)}
                 </span>
@@ -411,7 +430,7 @@ export default function FinanceDashboard() {
           </div>
           {filteredTxs.length === 0 && <div style={{ color: "#8E99A9", padding: 30, textAlign: "center" }}>Nenhuma transação encontrada.</div>}
           {filteredTxs.map(tx => (
-            <div key={tx.id} style={s.txRow}>
+            <div key={tx.id} style={s.txRow} className="finan-tx-row">
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
@@ -422,11 +441,11 @@ export default function FinanceDashboard() {
                   <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T00:00:00").toLocaleDateString("pt-BR")}</div>
                 </div>
               </div>
-              <span style={s.tag(catColor(tx.category))}>{catLabel(tx.category)}</span>
+              <span style={s.tag(catColor(tx.category))} className="finan-tx-tag">{catLabel(tx.category)}</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
                 {tx.type === "receita" ? "+" : "-"}{fmt(tx.amount)}
               </span>
-              <div style={{ display: "flex", gap: 4 }}>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 <button onClick={() => openEdit(tx)} style={{ background: "none", border: "none", color: "#5B8DEF", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Edit /></button>
                 <button onClick={() => remove(tx.id)} style={{ background: "none", border: "none", color: "#E8575A88", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Trash /></button>
               </div>
@@ -438,7 +457,7 @@ export default function FinanceDashboard() {
       {/* ═══════ ANALYTICS TAB ═══════ */}
       {activeTab === "analytics" && (
         <>
-          <div style={s.chartsGrid}>
+          <div style={s.chartsGrid} className="finan-charts-grid">
             <div style={s.card}>
               <div style={s.sectionTitle}>Evolução 6 Meses</div>
               <MiniBarChart data={monthComparison} height={200} />
@@ -455,15 +474,15 @@ export default function FinanceDashboard() {
             {catBreakdown.map((c, i) => {
               const pct = totalDespesa > 0 ? (c.value / totalDespesa * 100) : 0;
               return (
-                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#5A6070", width: 24 }}>{i + 1}</span>
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }} className="finan-analytics-row">
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#5A6070", width: 24, flexShrink: 0 }}>{i + 1}</span>
                   <span style={{ width: 12, height: 12, borderRadius: 3, background: c.color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{c.label}</span>
-                  <div style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }}>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, minWidth: 60 }}>{c.label}</span>
+                  <div style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }} className="finan-analytics-bar">
                     <div style={{ width: `${pct}%`, height: "100%", background: c.color, borderRadius: 6, transition: "width 0.5s ease" }} />
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }}>{fmt(c.value)}</span>
-                  <span style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }}>{pct.toFixed(0)}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }} className="finan-analytics-amount">{fmt(c.value)}</span>
+                  <span style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }} className="finan-analytics-pct">{pct.toFixed(0)}%</span>
                 </div>
               );
             })}
@@ -473,14 +492,14 @@ export default function FinanceDashboard() {
 
       {/* BOTTOM NAV */}
       <div style={s.bottomNav}>
-        <button style={s.bottomTab(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}>
-          <Icons.Home /> Dashboard
+        <button style={s.bottomTab(activeTab === "dashboard")} className="finan-bottom-tab" onClick={() => setActiveTab("dashboard")}>
+          <Icons.Home /><span>Dashboard</span>
         </button>
-        <button style={s.bottomTab(activeTab === "transactions")} onClick={() => setActiveTab("transactions")}>
-          <Icons.List /> Transações
+        <button style={s.bottomTab(activeTab === "transactions")} className="finan-bottom-tab" onClick={() => setActiveTab("transactions")}>
+          <Icons.List /><span>Transações</span>
         </button>
-        <button style={s.bottomTab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}>
-          <Icons.Chart /> Análises
+        <button style={s.bottomTab(activeTab === "analytics")} className="finan-bottom-tab" onClick={() => setActiveTab("analytics")}>
+          <Icons.Chart /><span>Análises</span>
         </button>
       </div>
 
