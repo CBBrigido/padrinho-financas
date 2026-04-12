@@ -264,7 +264,12 @@ export default function FinanceDashboard() {
     if (!form.description || !form.amount || !form.date) return;
     setLoading(true);
     try {
-      const payload = { ...form, amount: parseFloat(form.amount), category_id: form.category_id ? parseInt(form.category_id) : null };
+      let payload = { ...form, amount: parseFloat(form.amount), category_id: form.category_id ? parseInt(form.category_id) : null };
+      // "reserva" é salvo como despesa com a categoria Reserva
+      if (form.type === "reserva") {
+        payload.type = "despesa";
+        if (reservaCategory) payload.category_id = reservaCategory.id;
+      }
       if (editingTx) {
         await api.updateTransaction(editingTx, payload);
       } else {
@@ -307,6 +312,15 @@ export default function FinanceDashboard() {
   const catBreakdown = (summary?.category_breakdown || []).map(c => ({ id: c.id, label: c.name, color: c.color, value: c.total }));
   const monthComparison = (summary?.monthly_comparison || []).map(m => ({ label: MONTHS[m.month - 1], receita: m.receita, despesa: m.despesa }));
 
+  // Reserva
+  const reservaCategory = useMemo(() => categories.find(c => c.name === "Reserva"), [categories]);
+  const totalReserva = useMemo(() => {
+    if (!reservaCategory) return 0;
+    return transactions
+      .filter(t => t.type === "despesa" && t.category_id === reservaCategory.id)
+      .reduce((acc, t) => acc + parseFloat(t.amount), 0);
+  }, [transactions, reservaCategory]);
+
   const filteredTxs = useMemo(() => transactions.filter(t => {
     if (filterCat !== "all" && String(t.category_id) !== filterCat) return false;
     if (filterType !== "all" && t.type !== filterType) return false;
@@ -333,6 +347,11 @@ export default function FinanceDashboard() {
     if (overBudget) t.push("⚠️ Gastos acima da receita! Priorize cortes em despesas variáveis.");
     return t;
   }, [catBreakdown, transactions, totalReceita, saldo, overBudget]);
+
+  // Tip de reserva (fora do useMemo acima para usar totalReserva)
+  const reservaTip = totalReceita > 0 && totalReserva > 0
+    ? `Você guardou ${fmt(totalReserva)} na reserva este mês (${Math.round(totalReserva / totalReceita * 100)}% da receita).${totalReserva / totalReceita >= 0.1 ? " Ótimo hábito!" : " Tente chegar a 10%."}`
+    : null;
 
   // ── Auth gate ──
   if (!authChecked) return (
@@ -379,8 +398,46 @@ export default function FinanceDashboard() {
     <div className="pf-outer" style={{ background: "#13151A", minHeight: "100vh", display: "flex", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: "#F0F2F5" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Mobile base ─────────────────────────────── */
         .pf-sidebar { display: none; }
-        .pf-main { padding-bottom: 100px; }
+        .pf-main { padding-bottom: 90px; }
+
+        /* Header: logo+mês linha 1, ações linha 2 */
+        .pf-header {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          grid-template-rows: auto auto;
+          gap: 10px;
+          padding: 14px 0 10px;
+          align-items: center;
+        }
+        .pf-header-logo  { grid-column: 1; grid-row: 1; }
+        .pf-header-month { grid-column: 2; grid-row: 1; }
+        .pf-header-actions {
+          grid-column: 1 / -1;
+          grid-row: 2;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* KPIs: 2 colunas no mobile */
+        .pf-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+        .pf-kpi-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+
+        /* Bottom nav compacta */
+        .pf-bottom-nav {
+          padding: 6px 0 8px;
+        }
+
+        /* ── Desktop (≥768px) ────────────────────────── */
         @media (min-width: 768px) {
           .pf-sidebar {
             display: flex;
@@ -427,6 +484,20 @@ export default function FinanceDashboard() {
           .pf-sidebar-btn.active { background: #252830; color: #4ACA8B; font-weight: 700; }
           .pf-bottom-nav { display: none !important; }
           .pf-main { padding-bottom: 24px; flex: 1; min-width: 0; }
+
+          /* Header desktop: linha única */
+          .pf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 0 12px;
+            gap: 12px;
+          }
+          .pf-header-actions { justify-content: flex-end; }
+
+          /* KPIs: 4 colunas no desktop */
+          .pf-kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+          .pf-kpi-value { font-size: 22px; }
         }
       `}</style>
 
@@ -442,14 +513,14 @@ export default function FinanceDashboard() {
       <div className="pf-main" style={s.app}>
 
       {/* HEADER */}
-      <div style={s.header}>
-        <div style={s.logo}>Padrinho Finanças</div>
-        <div style={s.monthNav}>
+      <div className="pf-header">
+        <div className="pf-header-logo" style={s.logo}>Padrinho Finanças</div>
+        <div className="pf-header-month" style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
           <span style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
           <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
         </div>
-        <div style={s.headerRight}>
+        <div className="pf-header-actions">
           <div style={s.userBadge}><Icons.User /> {user.name?.split(" ")[0]}</div>
           <button style={s.logoutBtn} onClick={handleLogout} title="Sair"><Icons.Logout /></button>
           <button style={s.addBtn} onClick={openNew}><Icons.Plus /> Novo</button>
@@ -474,23 +545,32 @@ export default function FinanceDashboard() {
       {/* ═══════ DASHBOARD ═══════ */}
       {activeTab === "dashboard" && (
         <>
-          <div style={s.kpiGrid}>
+          <div className="pf-kpi-grid">
             <div style={s.kpi("#4ACA8B")}>
               <div style={s.kpiLabel}>Receita</div>
-              <div style={{ ...s.kpiValue, color: "#4ACA8B" }}>{fmt(totalReceita)}</div>
+              <div className="pf-kpi-value" style={{ color: "#4ACA8B" }}>{fmt(totalReceita)}</div>
             </div>
             <div style={s.kpi("#E8575A")}>
               <div style={s.kpiLabel}>Despesas</div>
-              <div style={{ ...s.kpiValue, color: "#E8575A" }}>{fmt(totalDespesa)}</div>
+              <div className="pf-kpi-value" style={{ color: "#E8575A" }}>{fmt(totalDespesa)}</div>
               {prevMonthDespesa > 0 && (
-                <div style={{ fontSize: 12, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#4ACA8B" }}>
-                  {despesaDiff > 0 ? "▲" : "▼"} {Math.abs(despesaDiff).toFixed(1)}% vs mês anterior
+                <div style={{ fontSize: 11, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#4ACA8B" }}>
+                  {despesaDiff > 0 ? "▲" : "▼"} {Math.abs(despesaDiff).toFixed(1)}% vs anterior
+                </div>
+              )}
+            </div>
+            <div style={s.kpi("#FBBF24")}>
+              <div style={s.kpiLabel}>Reserva</div>
+              <div className="pf-kpi-value" style={{ color: "#FBBF24" }}>{fmt(totalReserva)}</div>
+              {totalReceita > 0 && totalReserva > 0 && (
+                <div style={{ fontSize: 11, marginTop: 4, color: "#8E99A9" }}>
+                  {Math.round(totalReserva / totalReceita * 100)}% da receita
                 </div>
               )}
             </div>
             <div style={s.kpi(saldo >= 0 ? "#3EAFC4" : "#E8575A")}>
               <div style={s.kpiLabel}>Saldo</div>
-              <div style={{ ...s.kpiValue, color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }}>{fmt(saldo)}</div>
+              <div className="pf-kpi-value" style={{ color: saldo >= 0 ? "#3EAFC4" : "#E8575A" }}>{fmt(saldo)}</div>
             </div>
           </div>
 
@@ -522,9 +602,15 @@ export default function FinanceDashboard() {
             </div>
           </div>
 
-          {tips.length > 0 && (
+          {(tips.length > 0 || reservaTip) && (
             <div style={{ ...s.card, marginBottom: 16 }}>
               <div style={s.sectionTitle}><Icons.Bulb /> Sugestões Inteligentes</div>
+              {reservaTip && (
+                <div style={s.tipCard}>
+                  <span style={{ color: "#FBBF24", marginTop: 1 }}>•</span>
+                  <span>{reservaTip}</span>
+                </div>
+              )}
               {tips.map((tip, i) => (
                 <div key={i} style={s.tipCard}>
                   <span style={{ color: "#F4A940", marginTop: 1 }}>•</span>
@@ -646,24 +732,35 @@ export default function FinanceDashboard() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingTx ? "Editar Lançamento" : "Novo Lançamento"}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            {["despesa", "receita"].map(t => (
-              <button key={t} onClick={() => setForm(f => ({ ...f, type: t }))}
+            {[
+              { key: "despesa",  label: "Despesa",  active: "#E8575A" },
+              { key: "receita",  label: "Receita",  active: "#4ACA8B" },
+              { key: "reserva",  label: "Reserva",  active: "#FBBF24" },
+            ].map(({ key, label, active }) => (
+              <button key={key}
+                onClick={() => setForm(f => ({
+                  ...f,
+                  type: key,
+                  category_id: key === "reserva" && reservaCategory ? String(reservaCategory.id) : f.category_id,
+                }))}
                 style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid", cursor: "pointer", fontWeight: 700, fontSize: 14,
-                  borderColor: form.type === t ? (t === "receita" ? "#4ACA8B" : "#E8575A") : "#2A2E37",
-                  background: form.type === t ? (t === "receita" ? "#4ACA8B18" : "#E8575A18") : "#252830",
-                  color: form.type === t ? (t === "receita" ? "#4ACA8B" : "#E8575A") : "#8E99A9",
+                  flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid", cursor: "pointer", fontWeight: 700, fontSize: 13,
+                  borderColor: form.type === key ? active : "#2A2E37",
+                  background: form.type === key ? active + "22" : "#252830",
+                  color: form.type === key ? active : "#8E99A9",
                 }}>
-                {t === "receita" ? "Receita" : "Despesa"}
+                {label}
               </button>
             ))}
           </div>
           <input style={s.input} placeholder="Descrição" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
           <input style={s.input} placeholder="Valor" type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
-          <select style={s.input} value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}>
-            <option value="">Selecione a categoria</option>
-            {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-          </select>
+          {form.type !== "reserva" && (
+            <select style={s.input} value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}>
+              <option value="">Selecione a categoria</option>
+              {categories.filter(c => c.name !== "Reserva").map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+            </select>
+          )}
           <input style={s.input} type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#CDD2DA", cursor: "pointer" }}>
             <input type="checkbox" checked={form.is_fixed} onChange={e => setForm(f => ({ ...f, is_fixed: e.target.checked }))} style={{ accentColor: "#3EAFC4" }} />
