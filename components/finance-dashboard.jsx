@@ -78,9 +78,9 @@ function MiniBarChart({ data, height = 180, showReserva = true }) {
         const hRes = showReserva ? ((d.reserva || 0) / max) * height : 0;
         return (
           <g key={i}>
-            <rect x={x}                  y={height - hR}   width={barW} height={hR}   rx={3} fill="#4ACA8B" opacity={0.85} />
+            <rect x={x}                  y={height - hR}   width={barW} height={hR}   rx={3} fill="#22C55E" opacity={0.85} />
             <rect x={x + barW + 2}       y={height - hD}   width={barW} height={hD}   rx={3} fill="#E8575A" opacity={0.85} />
-            {showReserva && <rect x={x + (barW + 2) * 2} y={height - hRes} width={barW} height={hRes} rx={3} fill="#FBBF24" opacity={0.85} />}
+            {showReserva && <rect x={x + (barW + 2) * 2} y={height - hRes} width={barW} height={hRes} rx={3} fill="#F59E0B" opacity={0.85} />}
             <text x={x + groupW / 2} y={height + 18} textAnchor="middle" fontSize="11" fill="#8E99A9" fontFamily="inherit">{d.label}</text>
           </g>
         );
@@ -167,18 +167,22 @@ function AuthScreen({ onAuth }) {
   const s = {
     container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#13151A", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", padding: 16 },
     card: { background: "#1E2128", borderRadius: 20, padding: "40px 32px", width: "100%", maxWidth: 400, border: "1px solid #2A2E37", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" },
-    logo: { fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 8, background: "linear-gradient(135deg, #F4A940, #E8575A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    logo: { fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 8 },
     subtitle: { fontSize: 14, color: "#8E99A9", textAlign: "center", marginBottom: 28 },
     input: { background: "#252830", border: "1px solid #2A2E37", borderRadius: 10, padding: "12px 14px", color: "#F0F2F5", fontSize: 14, width: "100%", outline: "none", boxSizing: "border-box", marginBottom: 12 },
-    btn: { background: "linear-gradient(135deg, #4ACA8B, #3EAFC4)", border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
-    toggle: { background: "none", border: "none", color: "#3EAFC4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 16, textAlign: "center", width: "100%" },
+    btn: { background: "linear-gradient(135deg, #22C55E, #16A34A)", border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
+    toggle: { background: "none", border: "none", color: "#22C55E", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 16, textAlign: "center", width: "100%" },
     error: { background: "#E8575A18", border: "1px solid #E8575A44", borderRadius: 10, padding: "10px 14px", color: "#E8575A", fontSize: 13, marginBottom: 12 },
   };
 
   return (
     <div style={s.container}>
       <div style={s.card}>
-        <div style={s.logo}>Padrinho Finanças</div>
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 90, objectFit: "contain" }}
+            onError={e => { e.target.style.display = "none"; }} />
+        </div>
+        <div style={s.logo}><span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span></div>
         <div style={s.subtitle}>{mode === "login" ? "Acesse sua conta" : "Crie sua conta"}</div>
         {error && <div style={s.error}>{error}</div>}
         {mode === "register" && (
@@ -398,14 +402,14 @@ export default function FinanceDashboard() {
   const s = {
     app: { fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#13151A", color: "#F0F2F5", minHeight: "100vh", maxWidth: 1200, margin: "0 auto", padding: "0 16px 24px" },
     header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0 12px", flexWrap: "wrap", gap: 12 },
-    logo: { fontSize: 20, fontWeight: 800, letterSpacing: "-0.3px", background: "linear-gradient(135deg, #F4A940, #E8575A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    logo: { fontSize: 20, fontWeight: 800, letterSpacing: "-0.3px" },
     headerRight: { display: "flex", alignItems: "center", gap: 10 },
     userBadge: { display: "flex", alignItems: "center", gap: 6, background: "#252830", borderRadius: 10, padding: "6px 12px", fontSize: 13, color: "#CDD2DA" },
     logoutBtn: { background: "none", border: "1px solid #2A2E37", borderRadius: 10, padding: "8px 10px", color: "#8E99A9", cursor: "pointer", display: "flex", alignItems: "center" },
     monthNav: { display: "flex", alignItems: "center", gap: 8, background: "#1E2128", borderRadius: 12, padding: "6px 12px", border: "1px solid #2A2E37" },
     monthLabel: { fontSize: 15, fontWeight: 600, minWidth: 110, textAlign: "center", color: "#F0F2F5" },
     navBtn: { background: "none", border: "none", color: "#8E99A9", cursor: "pointer", padding: 4, display: "flex", borderRadius: 8 },
-    addBtn: { background: "linear-gradient(135deg, #4ACA8B, #3EAFC4)", border: "none", borderRadius: 12, padding: "10px 18px", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" },
+    addBtn: { background: "linear-gradient(135deg, #22C55E, #16A34A)", border: "none", borderRadius: 12, padding: "10px 18px", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" },
     card: { background: "#1E2128", borderRadius: 16, padding: 20, border: "1px solid #2A2E37" },
     kpiGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 },
     kpi: (accent) => ({ background: "#1E2128", borderRadius: 14, padding: "18px 20px", border: "1px solid #2A2E37", borderLeft: `4px solid ${accent}` }),
@@ -420,7 +424,7 @@ export default function FinanceDashboard() {
     select: { background: "#252830", border: "1px solid #2A2E37", borderRadius: 10, padding: "8px 12px", color: "#F0F2F5", fontSize: 13, outline: "none" },
     input: { background: "#252830", border: "1px solid #2A2E37", borderRadius: 10, padding: "10px 14px", color: "#F0F2F5", fontSize: 14, width: "100%", outline: "none", boxSizing: "border-box" },
     bottomNav: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#1A1D23", borderTop: "1px solid #2A2E37", display: "flex", justifyContent: "center", gap: 0, padding: "8px 0", zIndex: 900 },
-    bottomTab: (active) => ({ background: "none", border: "none", color: active ? "#4ACA8B" : "#5A6070", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", padding: "6px 24px", fontSize: 11, fontWeight: active ? 700 : 500 }),
+    bottomTab: (active) => ({ background: "none", border: "none", color: active ? "#22C55E" : "#5A6070", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", padding: "6px 24px", fontSize: 11, fontWeight: active ? 700 : 500 }),
     tipCard: { background: "#252830", borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#CDD2DA", lineHeight: 1.5 },
     loadingOverlay: { position: "fixed", inset: 0, background: "rgba(19,21,26,0.5)", zIndex: 950, display: "flex", alignItems: "center", justifyContent: "center" },
   };
@@ -501,13 +505,11 @@ export default function FinanceDashboard() {
           }
           .pf-outer { padding-left: 220px; }
           .pf-sidebar-logo {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 800;
-            background: linear-gradient(135deg, #F4A940, #E8575A);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             margin-bottom: 32px;
             padding: 0 8px;
+            line-height: 1.3;
           }
           .pf-sidebar-btn {
             background: none;
@@ -528,7 +530,7 @@ export default function FinanceDashboard() {
             transition: background 0.15s, color 0.15s;
           }
           .pf-sidebar-btn:hover { background: #252830; color: #CDD2DA; }
-          .pf-sidebar-btn.active { background: #252830; color: #4ACA8B; font-weight: 700; }
+          .pf-sidebar-btn.active { background: #252830; color: #22C55E; font-weight: 700; }
           .pf-bottom-nav { display: none !important; }
           .pf-main { padding-bottom: 24px; flex: 1; min-width: 0; }
 
@@ -558,7 +560,11 @@ export default function FinanceDashboard() {
 
       {/* SIDEBAR — desktop only */}
       <nav className="pf-sidebar">
-        <div className="pf-sidebar-logo">Padrinho Finanças</div>
+        <div className="pf-sidebar-logo">
+          <img src="/logo.png" alt="" style={{ height: 44, objectFit: "contain", marginBottom: 8, display: "block" }}
+            onError={e => { e.target.style.display = "none"; }} />
+          <span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span>
+        </div>
         <button className={`pf-sidebar-btn${activeTab === "dashboard" ? " active" : ""}`} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
         <button className={`pf-sidebar-btn${activeTab === "transactions" ? " active" : ""}`} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
         <button className={`pf-sidebar-btn${activeTab === "analytics" ? " active" : ""}`} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
@@ -571,7 +577,7 @@ export default function FinanceDashboard() {
 
       {/* HEADER */}
       <div className="pf-header">
-        <div className="pf-header-logo" style={s.logo}>Padrinho Finanças</div>
+        <div className="pf-header-logo" style={s.logo}><span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span></div>
         <div className="pf-header-month" style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
           <span className="pf-month-label" style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
@@ -605,22 +611,22 @@ export default function FinanceDashboard() {
       {activeTab === "dashboard" && (
         <>
           <div className="pf-kpi-grid">
-            <div style={s.kpi("#4ACA8B")}>
+            <div style={s.kpi("#22C55E")}>
               <div style={s.kpiLabel}>Receita</div>
-              <div className="pf-kpi-value" style={{ color: "#4ACA8B" }}>{fmt(totalReceita)}</div>
+              <div className="pf-kpi-value" style={{ color: "#22C55E" }}>{fmt(totalReceita)}</div>
             </div>
             <div style={s.kpi("#E8575A")}>
               <div style={s.kpiLabel}>Despesas</div>
               <div className="pf-kpi-value" style={{ color: "#E8575A" }}>{fmt(totalDespesa)}</div>
               {prevMonthDespesa > 0 && (
-                <div style={{ fontSize: 11, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#4ACA8B" }}>
+                <div style={{ fontSize: 11, marginTop: 4, color: despesaDiff > 0 ? "#E8575A" : "#22C55E" }}>
                   {despesaDiff > 0 ? "▲" : "▼"} {Math.abs(despesaDiff).toFixed(1)}% vs anterior
                 </div>
               )}
             </div>
-            <div style={s.kpi("#FBBF24")}>
+            <div style={s.kpi("#F59E0B")}>
               <div style={s.kpiLabel}>Reserva</div>
-              <div className="pf-kpi-value" style={{ color: "#FBBF24" }}>{fmt(totalReserva)}</div>
+              <div className="pf-kpi-value" style={{ color: "#F59E0B" }}>{fmt(totalReserva)}</div>
               {totalReceita > 0 && totalReserva > 0 && (
                 <div style={{ fontSize: 11, marginTop: 4, color: "#8E99A9" }}>
                   {Math.round(totalReserva / totalReceita * 100)}% da receita
@@ -637,9 +643,9 @@ export default function FinanceDashboard() {
             <div style={s.card}>
               <div style={s.sectionTitle}>Últimos 6 meses</div>
               <div style={{ display: "flex", gap: 12, marginBottom: 10, fontSize: 12, flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#4ACA8B", display: "inline-block" }} /> Receita</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#22C55E", display: "inline-block" }} /> Receita</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#E8575A", display: "inline-block" }} /> Despesa</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#FBBF24", display: "inline-block" }} /> Reserva</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#F59E0B", display: "inline-block" }} /> Reserva</span>
               </div>
               <MiniBarChart data={monthComparison} showReserva={true} />
             </div>
@@ -667,13 +673,13 @@ export default function FinanceDashboard() {
               <div style={s.sectionTitle}><Icons.Bulb /> Sugestões Inteligentes</div>
               {reservaTip && (
                 <div style={s.tipCard}>
-                  <span style={{ color: "#FBBF24", marginTop: 1 }}>•</span>
+                  <span style={{ color: "#F59E0B", marginTop: 1 }}>•</span>
                   <span>{reservaTip}</span>
                 </div>
               )}
               {tips.map((tip, i) => (
                 <div key={i} style={s.tipCard}>
-                  <span style={{ color: "#F4A940", marginTop: 1 }}>•</span>
+                  <span style={{ color: "#22C55E", marginTop: 1 }}>•</span>
                   <span>{tip}</span>
                 </div>
               ))}
@@ -686,14 +692,14 @@ export default function FinanceDashboard() {
             {transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map(tx => (
               <div key={tx.id} style={s.txRow}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
                     <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
                 {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-                <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
+                <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
                   {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
                 </span>
               </div>
@@ -723,7 +729,7 @@ export default function FinanceDashboard() {
           {filteredTxs.map(tx => (
             <div key={tx.id} style={s.txRow}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tx.description}
@@ -733,7 +739,7 @@ export default function FinanceDashboard() {
                 </div>
               </div>
               {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-              <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
+              <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
                 {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
               </span>
               <div style={{ display: "flex", gap: 4 }}>
@@ -752,9 +758,9 @@ export default function FinanceDashboard() {
             <div style={s.card}>
               <div style={s.sectionTitle}>Evolução 6 Meses</div>
               <div style={{ display: "flex", gap: 12, marginBottom: 10, fontSize: 12, flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#4ACA8B", display: "inline-block" }} /> Receita</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#22C55E", display: "inline-block" }} /> Receita</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#E8575A", display: "inline-block" }} /> Despesa</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#FBBF24", display: "inline-block" }} /> Reserva</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#F59E0B", display: "inline-block" }} /> Reserva</span>
               </div>
               <MiniBarChart data={monthComparison} height={200} showReserva={true} />
             </div>
@@ -779,11 +785,11 @@ export default function FinanceDashboard() {
                       const pct = ((m.reserva || 0) / maxR) * 100;
                       return (
                         <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 10, color: "#FBBF24", fontWeight: 700, opacity: m.reserva > 0 ? 1 : 0 }}>
+                          <span style={{ fontSize: 10, color: "#F59E0B", fontWeight: 700, opacity: m.reserva > 0 ? 1 : 0 }}>
                             {m.reserva > 0 ? fmt(m.reserva).replace("R$\u00a0", "R$") : ""}
                           </span>
                           <div style={{ width: "100%", background: "#2A2E37", borderRadius: 6, height: 90, display: "flex", alignItems: "flex-end" }}>
-                            <div style={{ width: "100%", height: `${pct}%`, background: "linear-gradient(180deg, #FBBF24, #F59E0B)", borderRadius: 6, minHeight: m.reserva > 0 ? 4 : 0, transition: "height 0.4s ease" }} />
+                            <div style={{ width: "100%", height: `${pct}%`, background: "linear-gradient(180deg, #F59E0B, #F59E0B)", borderRadius: 6, minHeight: m.reserva > 0 ? 4 : 0, transition: "height 0.4s ease" }} />
                           </div>
                           <span style={{ fontSize: 11, color: "#8E99A9" }}>{m.label}</span>
                         </div>
@@ -797,11 +803,11 @@ export default function FinanceDashboard() {
                       <div style={{ display: "flex", gap: 12, paddingTop: 10, borderTop: "1px solid #2A2E37", flexWrap: "wrap" }}>
                         <div>
                           <div style={{ fontSize: 11, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total (6 meses)</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "#FBBF24" }}>{fmt(totalAcum)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#F59E0B" }}>{fmt(totalAcum)}</div>
                         </div>
                         <div>
                           <div style={{ fontSize: 11, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px" }}>Média mensal</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "#FBBF24" }}>{fmt(totalAcum / mesesComReserva)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#F59E0B" }}>{fmt(totalAcum / mesesComReserva)}</div>
                         </div>
                       </div>
                     ) : null;
@@ -857,7 +863,7 @@ export default function FinanceDashboard() {
               fixas.map(tx => (
                 <div key={tx.id} style={{ ...s.txRow, flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
                       <div style={{ fontSize: 11, color: "#8E99A9" }}>
@@ -867,7 +873,7 @@ export default function FinanceDashboard() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A" }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A" }}>
                       {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
                     </span>
                     <button title={`Replicar para ${MONTHS[nextM - 1]}`}
@@ -914,9 +920,9 @@ export default function FinanceDashboard() {
 
             {/* KPIs do dia */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 14 }}>
-              <div style={{ ...s.kpi("#4ACA8B"), padding: "14px 12px" }}>
+              <div style={{ ...s.kpi("#22C55E"), padding: "14px 12px" }}>
                 <div style={{ ...s.kpiLabel, fontSize: 10 }}>Receita</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#4ACA8B" }}>{fmt(dayReceita)}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#22C55E" }}>{fmt(dayReceita)}</div>
               </div>
               <div style={{ ...s.kpi("#E8575A"), padding: "14px 12px" }}>
                 <div style={{ ...s.kpiLabel, fontSize: 10 }}>Despesas</div>
@@ -939,13 +945,13 @@ export default function FinanceDashboard() {
                 dayTxs.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date)).map(tx => (
                   <div key={tx.id} style={s.txRow}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
                         {tx.category_name && <div style={{ fontSize: 11, color: tx.category_color || "#8E99A9" }}>{tx.category_name}</div>}
                       </div>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", whiteSpace: "nowrap" }}>
                       {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
                     </span>
                     <div style={{ display: "flex", gap: 4 }}>
@@ -975,8 +981,8 @@ export default function FinanceDashboard() {
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { key: "despesa",  label: "Despesa",  active: "#E8575A" },
-              { key: "receita",  label: "Receita",  active: "#4ACA8B" },
-              { key: "reserva",  label: "Reserva",  active: "#FBBF24" },
+              { key: "receita",  label: "Receita",  active: "#22C55E" },
+              { key: "reserva",  label: "Reserva",  active: "#F59E0B" },
             ].map(({ key, label, active }) => (
               <button key={key}
                 onClick={() => setForm(f => ({
