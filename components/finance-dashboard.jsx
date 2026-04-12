@@ -179,7 +179,7 @@ function AuthScreen({ onAuth }) {
     <div style={s.container}>
       <div style={s.card}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 160, objectFit: "contain", margin: "0 auto", display: "block" }}
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 220, objectFit: "contain", margin: "0 auto", display: "block" }}
             onError={e => { e.target.style.display = "none"; }} />
         </div>
         <div style={s.subtitle}>{mode === "login" ? "Acesse sua conta" : "Crie sua conta"}</div>
@@ -558,7 +558,7 @@ export default function FinanceDashboard() {
       {/* SIDEBAR — desktop only */}
       <nav className="pf-sidebar">
         <div className="pf-sidebar-logo">
-          <img src="/logo.png" alt="Padrinho Finanças" style={{ width: "100%", maxHeight: 110, objectFit: "contain", display: "block", margin: "0 auto" }}
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ width: "100%", maxHeight: 160, objectFit: "contain", display: "block", margin: "0 auto" }}
             onError={e => { e.target.style.display = "none"; }} />
         </div>
         <button className={`pf-sidebar-btn${activeTab === "dashboard" ? " active" : ""}`} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
@@ -573,7 +573,10 @@ export default function FinanceDashboard() {
 
       {/* HEADER */}
       <div className="pf-header">
-        <div className="pf-header-logo" style={s.logo}><span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span></div>
+        <div className="pf-header-logo">
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 52, objectFit: "contain", display: "block" }}
+            onError={e => { e.target.style.display = "none"; }} />
+        </div>
         <div className="pf-header-month" style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
           <span className="pf-month-label" style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
