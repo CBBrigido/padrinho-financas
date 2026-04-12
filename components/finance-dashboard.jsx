@@ -58,23 +58,27 @@ const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov
 const fmt = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // ─── Mini Bar Chart ─────────────────────────────────────────────────────
-function MiniBarChart({ data, height = 180 }) {
+function MiniBarChart({ data, height = 180, showReserva = true }) {
   if (!data || !data.length) return <div style={{ color: "#8E99A9", padding: 20, textAlign: "center", fontSize: 13 }}>Sem dados para exibir</div>;
-  const max = Math.max(...data.map(d => Math.max(d.receita, d.despesa)), 1);
-  const barW = Math.min(28, Math.floor(260 / data.length));
-  const gap = Math.min(16, Math.floor(80 / data.length));
-  const w = data.length * (barW * 2 + gap) + 40;
+  const cols = showReserva ? 3 : 2;
+  const max = Math.max(...data.map(d => Math.max(d.receita, d.despesa, showReserva ? (d.reserva || 0) : 0)), 1);
+  const barW = Math.min(18, Math.floor(180 / data.length));
+  const gap = Math.min(14, Math.floor(60 / data.length));
+  const groupW = barW * cols + (cols - 1) * 2;
+  const w = data.length * (groupW + gap) + 40;
   return (
     <svg viewBox={`0 0 ${w} ${height + 30}`} style={{ width: "100%", maxHeight: height + 30 }}>
       {data.map((d, i) => {
-        const x = 20 + i * (barW * 2 + gap);
+        const x = 20 + i * (groupW + gap);
         const hR = (d.receita / max) * height;
         const hD = (d.despesa / max) * height;
+        const hRes = showReserva ? ((d.reserva || 0) / max) * height : 0;
         return (
           <g key={i}>
-            <rect x={x} y={height - hR} width={barW} height={hR} rx={4} fill="#4ACA8B" opacity={0.85} />
-            <rect x={x + barW + 2} y={height - hD} width={barW} height={hD} rx={4} fill="#E8575A" opacity={0.85} />
-            <text x={x + barW} y={height + 18} textAnchor="middle" fontSize="11" fill="#8E99A9" fontFamily="inherit">{d.label}</text>
+            <rect x={x}                  y={height - hR}   width={barW} height={hR}   rx={3} fill="#4ACA8B" opacity={0.85} />
+            <rect x={x + barW + 2}       y={height - hD}   width={barW} height={hD}   rx={3} fill="#E8575A" opacity={0.85} />
+            {showReserva && <rect x={x + (barW + 2) * 2} y={height - hRes} width={barW} height={hRes} rx={3} fill="#FBBF24" opacity={0.85} />}
+            <text x={x + groupW / 2} y={height + 18} textAnchor="middle" fontSize="11" fill="#8E99A9" fontFamily="inherit">{d.label}</text>
           </g>
         );
       })}
@@ -264,12 +268,7 @@ export default function FinanceDashboard() {
     if (!form.description || !form.amount || !form.date) return;
     setLoading(true);
     try {
-      let payload = { ...form, amount: parseFloat(form.amount), category_id: form.category_id ? parseInt(form.category_id) : null };
-      // "reserva" é salvo como despesa com a categoria Reserva
-      if (form.type === "reserva") {
-        payload.type = "despesa";
-        if (reservaCategory) payload.category_id = reservaCategory.id;
-      }
+      const payload = { ...form, amount: parseFloat(form.amount), category_id: form.category_id ? parseInt(form.category_id) : null };
       if (editingTx) {
         await api.updateTransaction(editingTx, payload);
       } else {
@@ -307,19 +306,11 @@ export default function FinanceDashboard() {
   // ── Derived data ──
   const totalReceita = summary?.current_month?.receita || 0;
   const totalDespesa = summary?.current_month?.despesa || 0;
+  const totalReserva = summary?.current_month?.reserva || 0;
   const saldo = summary?.current_month?.saldo || 0;
   const overBudget = summary?.current_month?.over_budget || false;
   const catBreakdown = (summary?.category_breakdown || []).map(c => ({ id: c.id, label: c.name, color: c.color, value: c.total }));
-  const monthComparison = (summary?.monthly_comparison || []).map(m => ({ label: MONTHS[m.month - 1], receita: m.receita, despesa: m.despesa }));
-
-  // Reserva
-  const reservaCategory = useMemo(() => categories.find(c => c.name === "Reserva"), [categories]);
-  const totalReserva = useMemo(() => {
-    if (!reservaCategory) return 0;
-    return transactions
-      .filter(t => t.type === "despesa" && t.category_id === reservaCategory.id)
-      .reduce((acc, t) => acc + parseFloat(t.amount), 0);
-  }, [transactions, reservaCategory]);
+  const monthComparison = (summary?.monthly_comparison || []).map(m => ({ label: MONTHS[m.month - 1], receita: m.receita, despesa: m.despesa, reserva: m.reserva || 0 }));
 
   const filteredTxs = useMemo(() => transactions.filter(t => {
     if (filterCat !== "all" && String(t.category_id) !== filterCat) return false;
@@ -577,11 +568,12 @@ export default function FinanceDashboard() {
           <div style={s.chartsGrid}>
             <div style={s.card}>
               <div style={s.sectionTitle}>Últimos 6 meses</div>
-              <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 12 }}>
+              <div style={{ display: "flex", gap: 12, marginBottom: 10, fontSize: 12, flexWrap: "wrap" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#4ACA8B", display: "inline-block" }} /> Receita</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#E8575A", display: "inline-block" }} /> Despesa</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#FBBF24", display: "inline-block" }} /> Reserva</span>
               </div>
-              <MiniBarChart data={monthComparison} />
+              <MiniBarChart data={monthComparison} showReserva={true} />
             </div>
             <div style={s.card}>
               <div style={s.sectionTitle}>Gastos por Categoria</div>
@@ -626,15 +618,15 @@ export default function FinanceDashboard() {
             {transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map(tx => (
               <div key={tx.id} style={s.txRow}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
                     <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
                 {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-                <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap" }}>
-                  {tx.type === "receita" ? "+" : "-"}{fmt(parseFloat(tx.amount))}
+                <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap" }}>
+                  {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
                 </span>
               </div>
             ))}
@@ -652,6 +644,7 @@ export default function FinanceDashboard() {
               <option value="all">Todos tipos</option>
               <option value="receita">Receitas</option>
               <option value="despesa">Despesas</option>
+              <option value="reserva">Reservas</option>
             </select>
             <select style={s.select} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value="all">Todas categorias</option>
@@ -662,7 +655,7 @@ export default function FinanceDashboard() {
           {filteredTxs.map(tx => (
             <div key={tx.id} style={s.txRow}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : "#E8575A", flexShrink: 0 }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tx.description}
@@ -672,8 +665,8 @@ export default function FinanceDashboard() {
                 </div>
               </div>
               {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-              <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
-                {tx.type === "receita" ? "+" : "-"}{fmt(parseFloat(tx.amount))}
+              <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
+                {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
               </span>
               <div style={{ display: "flex", gap: 4 }}>
                 <button onClick={() => openEdit(tx)} style={{ background: "none", border: "none", color: "#5B8DEF", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Edit /></button>
@@ -690,7 +683,12 @@ export default function FinanceDashboard() {
           <div style={s.chartsGrid}>
             <div style={s.card}>
               <div style={s.sectionTitle}>Evolução 6 Meses</div>
-              <MiniBarChart data={monthComparison} height={200} />
+              <div style={{ display: "flex", gap: 12, marginBottom: 10, fontSize: 12, flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#4ACA8B", display: "inline-block" }} /> Receita</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#E8575A", display: "inline-block" }} /> Despesa</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#FBBF24", display: "inline-block" }} /> Reserva</span>
+              </div>
+              <MiniBarChart data={monthComparison} height={200} showReserva={true} />
             </div>
             <div style={s.card}>
               <div style={s.sectionTitle}>Distribuição de Despesas</div>
@@ -698,6 +696,51 @@ export default function FinanceDashboard() {
                 <DonutChart slices={catBreakdown} size={200} />
               </div>
             </div>
+          </div>
+
+          {/* Gráfico de Reserva Mensal */}
+          <div style={{ ...s.card, marginBottom: 16 }}>
+            <div style={s.sectionTitle}>Reserva Mensal Acumulada</div>
+            {monthComparison.filter(m => m.reserva > 0).length === 0
+              ? <div style={{ color: "#8E99A9", padding: 20, textAlign: "center", fontSize: 13 }}>Nenhuma reserva registrada nos últimos 6 meses.</div>
+              : (
+                <>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 120, marginBottom: 8 }}>
+                    {monthComparison.map((m, i) => {
+                      const maxR = Math.max(...monthComparison.map(x => x.reserva || 0), 1);
+                      const pct = ((m.reserva || 0) / maxR) * 100;
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10, color: "#FBBF24", fontWeight: 700, opacity: m.reserva > 0 ? 1 : 0 }}>
+                            {m.reserva > 0 ? fmt(m.reserva).replace("R$\u00a0", "R$") : ""}
+                          </span>
+                          <div style={{ width: "100%", background: "#2A2E37", borderRadius: 6, height: 90, display: "flex", alignItems: "flex-end" }}>
+                            <div style={{ width: "100%", height: `${pct}%`, background: "linear-gradient(180deg, #FBBF24, #F59E0B)", borderRadius: 6, minHeight: m.reserva > 0 ? 4 : 0, transition: "height 0.4s ease" }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: "#8E99A9" }}>{m.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {(() => {
+                    const totalAcum = monthComparison.reduce((s, m) => s + (m.reserva || 0), 0);
+                    const mesesComReserva = monthComparison.filter(m => m.reserva > 0).length;
+                    return totalAcum > 0 ? (
+                      <div style={{ display: "flex", gap: 12, paddingTop: 10, borderTop: "1px solid #2A2E37", flexWrap: "wrap" }}>
+                        <div>
+                          <div style={{ fontSize: 11, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total (6 meses)</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#FBBF24" }}>{fmt(totalAcum)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, color: "#8E99A9", textTransform: "uppercase", letterSpacing: "0.5px" }}>Média mensal</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#FBBF24" }}>{fmt(totalAcum / mesesComReserva)}</div>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </>
+              )
+            }
           </div>
           <div style={s.card}>
             <div style={s.sectionTitle}>Ranking de Categorias</div>
@@ -758,7 +801,7 @@ export default function FinanceDashboard() {
           {form.type !== "reserva" && (
             <select style={s.input} value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}>
               <option value="">Selecione a categoria</option>
-              {categories.filter(c => c.name !== "Reserva").map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+              {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
             </select>
           )}
           <input style={s.input} type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
