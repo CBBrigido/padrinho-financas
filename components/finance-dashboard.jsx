@@ -178,11 +178,10 @@ function AuthScreen({ onAuth }) {
   return (
     <div style={s.container}>
       <div style={s.card}>
-        <div style={{ textAlign: "center", marginBottom: 4 }}>
-          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 90, objectFit: "contain" }}
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 160, objectFit: "contain", margin: "0 auto", display: "block" }}
             onError={e => { e.target.style.display = "none"; }} />
         </div>
-        <div style={s.logo}><span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span></div>
         <div style={s.subtitle}>{mode === "login" ? "Acesse sua conta" : "Crie sua conta"}</div>
         {error && <div style={s.error}>{error}</div>}
         {mode === "register" && (
@@ -505,11 +504,9 @@ export default function FinanceDashboard() {
           }
           .pf-outer { padding-left: 220px; }
           .pf-sidebar-logo {
-            font-size: 17px;
-            font-weight: 800;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
             padding: 0 8px;
-            line-height: 1.3;
+            text-align: center;
           }
           .pf-sidebar-btn {
             background: none;
@@ -561,9 +558,8 @@ export default function FinanceDashboard() {
       {/* SIDEBAR — desktop only */}
       <nav className="pf-sidebar">
         <div className="pf-sidebar-logo">
-          <img src="/logo.png" alt="" style={{ height: 44, objectFit: "contain", marginBottom: 8, display: "block" }}
+          <img src="/logo.png" alt="Padrinho Finanças" style={{ width: "100%", maxHeight: 110, objectFit: "contain", display: "block", margin: "0 auto" }}
             onError={e => { e.target.style.display = "none"; }} />
-          <span style={{ color: "#F0F2F5" }}>Padrinho </span><span style={{ color: "#22C55E" }}>Finanças</span>
         </div>
         <button className={`pf-sidebar-btn${activeTab === "dashboard" ? " active" : ""}`} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
         <button className={`pf-sidebar-btn${activeTab === "transactions" ? " active" : ""}`} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
