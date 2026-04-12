@@ -52,6 +52,9 @@ const Icons = {
   Logout: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   User: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   Loader: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+  Pin: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  CalDay: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><text x="12" y="19" textAnchor="middle" fontSize="8" fontWeight="700" stroke="none" fill="currentColor">D</text></svg>,
+  Copy: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
 };
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -213,6 +216,10 @@ export default function FinanceDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ type: "despesa", description: "", amount: "", category_id: "", date: "", is_fixed: false });
+  const [activeDate, setActiveDate] = useState(() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
+  });
 
   // ── Check auth on mount ──
   useEffect(() => {
@@ -303,6 +310,39 @@ export default function FinanceDashboard() {
     setCurrentYear(y);
   };
 
+  const navigateDay = (dir) => {
+    const d = new Date(activeDate + "T12:00:00");
+    d.setDate(d.getDate() + dir);
+    // manter dentro do mês corrente
+    if (d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear) {
+      setActiveDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+    }
+  };
+
+  const replicateFixed = async (bills, targetMonth, targetYear) => {
+    if (!bills.length) return;
+    const targetDate = `${targetYear}-${String(targetMonth).padStart(2,"0")}-01`;
+    setLoading(true);
+    try {
+      for (const b of bills) {
+        await api.createTransaction({
+          type: b.type,
+          description: b.description,
+          amount: parseFloat(b.amount),
+          category_id: b.category_id || null,
+          date: targetDate,
+          is_fixed: true,
+        });
+      }
+      setError("");
+      await fetchData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Derived data ──
   const totalReceita = summary?.current_month?.receita || 0;
   const totalDespesa = summary?.current_month?.despesa || 0;
@@ -390,17 +430,21 @@ export default function FinanceDashboard() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ── Reset overflow ──────────────────────────── */
+        .pf-outer, .pf-main { overflow-x: hidden; box-sizing: border-box; }
+        * { box-sizing: border-box; }
+
         /* ── Mobile base ─────────────────────────────── */
         .pf-sidebar { display: none; }
-        .pf-main { padding-bottom: 90px; }
+        .pf-main { padding-bottom: 72px; }
 
         /* Header: logo+mês linha 1, ações linha 2 */
         .pf-header {
           display: grid;
           grid-template-columns: 1fr auto;
           grid-template-rows: auto auto;
-          gap: 10px;
-          padding: 14px 0 10px;
+          gap: 8px;
+          padding: 12px 0 10px;
           align-items: center;
         }
         .pf-header-logo  { grid-column: 1; grid-row: 1; }
@@ -421,12 +465,23 @@ export default function FinanceDashboard() {
           gap: 10px;
           margin-bottom: 16px;
         }
-        .pf-kpi-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+        .pf-kpi-value { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; }
 
-        /* Bottom nav compacta */
-        .pf-bottom-nav {
-          padding: 6px 0 8px;
-        }
+        /* Bottom nav: 5 abas, flex igual */
+        .pf-bottom-nav { padding: 4px 0 6px; }
+        .pf-bottom-nav button { flex: 1 !important; padding: 4px 2px !important; min-width: 0 !important; font-size: 10px !important; }
+
+        /* Transações: esconder categoria no mobile, encolher valor */
+        .pf-tx-cat { display: none; }
+        .pf-tx-amount { min-width: 70px !important; font-size: 13px !important; }
+
+        /* Ranking categorias: esconder barra e % no mobile */
+        .pf-rank-bar { display: none; }
+        .pf-rank-pct { display: none; }
+        .pf-rank-val { min-width: 0 !important; font-size: 12px !important; }
+
+        /* Month label sem minWidth fixo */
+        .pf-month-label { min-width: 90px !important; font-size: 14px !important; }
 
         /* ── Desktop (≥768px) ────────────────────────── */
         @media (min-width: 768px) {
@@ -442,7 +497,7 @@ export default function FinanceDashboard() {
             top: 0;
             height: 100vh;
             flex-shrink: 0;
-            box-sizing: border-box;
+            overflow-y: auto;
           }
           .pf-sidebar-logo {
             font-size: 18px;
@@ -489,6 +544,14 @@ export default function FinanceDashboard() {
           /* KPIs: 4 colunas no desktop */
           .pf-kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
           .pf-kpi-value { font-size: 22px; }
+
+          /* Restaurar elementos no desktop */
+          .pf-tx-cat { display: inline; }
+          .pf-tx-amount { min-width: 90px !important; font-size: 15px !important; }
+          .pf-rank-bar { display: block; }
+          .pf-rank-pct { display: inline; }
+          .pf-rank-val { min-width: 80px !important; font-size: 13px !important; }
+          .pf-month-label { min-width: 110px !important; font-size: 15px !important; }
         }
       `}</style>
 
@@ -498,6 +561,8 @@ export default function FinanceDashboard() {
         <button className={`pf-sidebar-btn${activeTab === "dashboard" ? " active" : ""}`} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
         <button className={`pf-sidebar-btn${activeTab === "transactions" ? " active" : ""}`} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
         <button className={`pf-sidebar-btn${activeTab === "analytics" ? " active" : ""}`} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
+        <button className={`pf-sidebar-btn${activeTab === "fixas" ? " active" : ""}`} onClick={() => setActiveTab("fixas")}><Icons.Pin /> Contas Fixas</button>
+        <button className={`pf-sidebar-btn${activeTab === "diario" ? " active" : ""}`} onClick={() => setActiveTab("diario")}><Icons.CalDay /> Diário</button>
         <button className="pf-sidebar-btn" style={{ marginTop: "auto", color: "#8E99A9" }} onClick={handleLogout}><Icons.Logout /> Sair</button>
       </nav>
 
@@ -508,7 +573,7 @@ export default function FinanceDashboard() {
         <div className="pf-header-logo" style={s.logo}>Padrinho Finanças</div>
         <div className="pf-header-month" style={s.monthNav}>
           <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
-          <span style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
+          <span className="pf-month-label" style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
           <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
         </div>
         <div className="pf-header-actions">
@@ -624,8 +689,8 @@ export default function FinanceDashboard() {
                     <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
-                {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-                <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap" }}>
+                {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
+                <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
                   {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
                 </span>
               </div>
@@ -664,8 +729,8 @@ export default function FinanceDashboard() {
                   <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
                 </div>
               </div>
-              {tx.category_name && <span style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
-              <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
+              {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
+              <span className="pf-tx-amount" style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
                 {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
               </span>
               <div style={{ display: "flex", gap: 4 }}>
@@ -752,11 +817,11 @@ export default function FinanceDashboard() {
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#5A6070", width: 24 }}>{i + 1}</span>
                   <span style={{ width: 12, height: 12, borderRadius: 3, background: c.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{c.label}</span>
-                  <div style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }}>
+                  <div className="pf-rank-bar" style={{ flex: 2, background: "#2A2E37", borderRadius: 6, height: 10, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: c.color, borderRadius: 6, transition: "width 0.5s ease" }} />
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }}>{fmt(c.value)}</span>
-                  <span style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }}>{pct.toFixed(0)}%</span>
+                  <span className="pf-rank-val" style={{ fontSize: 13, fontWeight: 700, color: "#CDD2DA", minWidth: 80, textAlign: "right" }}>{fmt(c.value)}</span>
+                  <span className="pf-rank-pct" style={{ fontSize: 12, color: "#8E99A9", minWidth: 40, textAlign: "right" }}>{pct.toFixed(0)}%</span>
                 </div>
               );
             })}
@@ -764,11 +829,141 @@ export default function FinanceDashboard() {
         </>
       )}
 
+      {/* ═══════ CONTAS FIXAS ═══════ */}
+      {activeTab === "fixas" && (() => {
+        const fixas = transactions.filter(t => t.is_fixed);
+        const nextM = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextY = currentMonth === 12 ? currentYear + 1 : currentYear;
+        return (
+          <div style={s.card}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+              <div style={s.sectionTitle}><Icons.Pin /> Contas Fixas — {MONTHS[currentMonth - 1]} {currentYear}</div>
+              {fixas.length > 0 && (
+                <button onClick={() => replicateFixed(fixas, nextM, nextY)}
+                  style={{ ...s.addBtn, fontSize: 13, padding: "8px 14px" }}>
+                  <Icons.Copy /> Replicar tudo → {MONTHS[nextM - 1]}
+                </button>
+              )}
+            </div>
+            {fixas.length === 0 ? (
+              <div style={{ color: "#8E99A9", padding: "24px 0", textAlign: "center", fontSize: 14 }}>
+                <div style={{ marginBottom: 8 }}>Nenhuma conta fixa neste mês.</div>
+                <div style={{ fontSize: 12 }}>Ao adicionar um lançamento, marque "Conta fixa" para aparecer aqui.</div>
+              </div>
+            ) : (
+              fixas.map(tx => (
+                <div key={tx.id} style={{ ...s.txRow, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
+                      <div style={{ fontSize: 11, color: "#8E99A9" }}>
+                        {tx.category_name && <span style={{ marginRight: 6, color: tx.category_color || "#8E99A9" }}>{tx.category_name}</span>}
+                        {tx.type === "receita" ? "Receita" : tx.type === "reserva" ? "Reserva" : "Despesa"}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A" }}>
+                      {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
+                    </span>
+                    <button title={`Replicar para ${MONTHS[nextM - 1]}`}
+                      onClick={() => replicateFixed([tx], nextM, nextY)}
+                      style={{ background: "#252830", border: "1px solid #2A2E37", borderRadius: 8, color: "#3EAFC4", cursor: "pointer", padding: "5px 10px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                      <Icons.Copy /> {MONTHS[nextM - 1]}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ═══════ DIÁRIO ═══════ */}
+      {activeTab === "diario" && (() => {
+        const dayTxs = transactions.filter(t => t.date && t.date.slice(0, 10) === activeDate);
+        const dayReceita = dayTxs.filter(t => t.type === "receita").reduce((s, t) => s + parseFloat(t.amount), 0);
+        const dayDespesa = dayTxs.filter(t => t.type === "despesa").reduce((s, t) => s + parseFloat(t.amount), 0);
+        const dayReserva = dayTxs.filter(t => t.type === "reserva").reduce((s, t) => s + parseFloat(t.amount), 0);
+        const daySaldo = dayReceita - dayDespesa - dayReserva;
+        const [dy, dm, dd] = activeDate.split("-");
+        const dateLabel = `${dd}/${dm}/${dy}`;
+        const isToday = activeDate === (() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`; })();
+        return (
+          <>
+            {/* Navegador de dia */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1E2128", borderRadius: 12, padding: "6px 12px", border: "1px solid #2A2E37" }}>
+                <button style={s.navBtn} onClick={() => navigateDay(-1)}><Icons.ChevronLeft /></button>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#F0F2F5", minWidth: 120, textAlign: "center" }}>
+                  {isToday ? "Hoje" : dateLabel}
+                  {!isToday && <span style={{ fontSize: 11, color: "#8E99A9", marginLeft: 6 }}>{dateLabel}</span>}
+                </span>
+                <button style={s.navBtn} onClick={() => navigateDay(1)}><Icons.ChevronRight /></button>
+              </div>
+              <button style={s.addBtn} onClick={() => {
+                setForm(f => ({ ...f, date: activeDate }));
+                setEditingTx(null);
+                setShowModal(true);
+              }}><Icons.Plus /> Novo</button>
+            </div>
+
+            {/* KPIs do dia */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 14 }}>
+              <div style={{ ...s.kpi("#4ACA8B"), padding: "14px 12px" }}>
+                <div style={{ ...s.kpiLabel, fontSize: 10 }}>Receita</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#4ACA8B" }}>{fmt(dayReceita)}</div>
+              </div>
+              <div style={{ ...s.kpi("#E8575A"), padding: "14px 12px" }}>
+                <div style={{ ...s.kpiLabel, fontSize: 10 }}>Despesas</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#E8575A" }}>{fmt(dayDespesa)}</div>
+              </div>
+              <div style={{ ...s.kpi(daySaldo >= 0 ? "#3EAFC4" : "#E8575A"), padding: "14px 12px" }}>
+                <div style={{ ...s.kpiLabel, fontSize: 10 }}>Saldo</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: daySaldo >= 0 ? "#3EAFC4" : "#E8575A" }}>{fmt(daySaldo)}</div>
+              </div>
+            </div>
+
+            {/* Transações do dia */}
+            <div style={s.card}>
+              <div style={s.sectionTitle}>Transações do dia</div>
+              {dayTxs.length === 0 ? (
+                <div style={{ color: "#8E99A9", padding: "20px 0", textAlign: "center", fontSize: 14 }}>
+                  Nenhuma transação em {dateLabel}. Toque em "Novo" para adicionar.
+                </div>
+              ) : (
+                dayTxs.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date)).map(tx => (
+                  <div key={tx.id} style={s.txRow}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
+                        {tx.category_name && <div style={{ fontSize: 11, color: tx.category_color || "#8E99A9" }}>{tx.category_name}</div>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: tx.type === "receita" ? "#4ACA8B" : tx.type === "reserva" ? "#FBBF24" : "#E8575A", whiteSpace: "nowrap" }}>
+                      {tx.type === "receita" ? "+" : tx.type === "reserva" ? "↗" : "-"}{fmt(parseFloat(tx.amount))}
+                    </span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button onClick={() => openEdit(tx)} style={{ background: "none", border: "none", color: "#5B8DEF", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Edit /></button>
+                      <button onClick={() => remove(tx.id)} style={{ background: "none", border: "none", color: "#E8575A88", cursor: "pointer", padding: 6, borderRadius: 8 }}><Icons.Trash /></button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        );
+      })()}
+
       {/* BOTTOM NAV */}
       <div className="pf-bottom-nav" style={s.bottomNav}>
-        <button style={s.bottomTab(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}><Icons.Home /> Dashboard</button>
-        <button style={s.bottomTab(activeTab === "transactions")} onClick={() => setActiveTab("transactions")}><Icons.List /> Transações</button>
-        <button style={s.bottomTab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}><Icons.Chart /> Análises</button>
+        <button style={s.bottomTab(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}><Icons.Home /><span>Início</span></button>
+        <button style={s.bottomTab(activeTab === "transactions")} onClick={() => setActiveTab("transactions")}><Icons.List /><span>Lançamentos</span></button>
+        <button style={s.bottomTab(activeTab === "diario")} onClick={() => setActiveTab("diario")}><Icons.CalDay /><span>Diário</span></button>
+        <button style={s.bottomTab(activeTab === "fixas")} onClick={() => setActiveTab("fixas")}><Icons.Pin /><span>Fixas</span></button>
+        <button style={s.bottomTab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}><Icons.Chart /><span>Análises</span></button>
       </div>
 
       {/* MODAL */}
