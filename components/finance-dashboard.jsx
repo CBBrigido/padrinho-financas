@@ -489,16 +489,17 @@ export default function FinanceDashboard() {
             display: flex;
             flex-direction: column;
             width: 220px;
-            min-height: 100vh;
             background: #1A1D23;
             border-right: 1px solid #2A2E37;
             padding: 24px 16px;
-            position: sticky;
+            position: fixed;
             top: 0;
-            height: 100vh;
-            flex-shrink: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
             overflow-y: auto;
           }
+          .pf-outer { padding-left: 220px; }
           .pf-sidebar-logo {
             font-size: 18px;
             font-weight: 800;
@@ -579,7 +580,9 @@ export default function FinanceDashboard() {
         <div className="pf-header-actions">
           <div style={s.userBadge}><Icons.User /> {user.name?.split(" ")[0]}</div>
           <button style={s.logoutBtn} onClick={handleLogout} title="Sair"><Icons.Logout /></button>
-          <button style={s.addBtn} onClick={openNew}><Icons.Plus /> Novo</button>
+          {activeTab !== "diario" && (
+            <button style={s.addBtn} onClick={openNew}><Icons.Plus /> Novo</button>
+          )}
         </div>
       </div>
 
