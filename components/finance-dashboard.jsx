@@ -166,9 +166,9 @@ function AuthScreen({ onAuth }) {
 
   const s = {
     container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#13151A", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", padding: 16 },
-    card: { background: "#1E2128", borderRadius: 20, padding: "40px 32px", width: "100%", maxWidth: 400, border: "1px solid #2A2E37", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" },
+    card: { background: "#1E2128", borderRadius: 20, padding: "20px 32px 32px", width: "100%", maxWidth: 400, border: "1px solid #2A2E37", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" },
     logo: { fontSize: 26, fontWeight: 800, textAlign: "center", marginBottom: 8 },
-    subtitle: { fontSize: 14, color: "#8E99A9", textAlign: "center", marginBottom: 28 },
+    subtitle: { fontSize: 14, color: "#8E99A9", textAlign: "center", marginBottom: 20 },
     input: { background: "#252830", border: "1px solid #2A2E37", borderRadius: 10, padding: "12px 14px", color: "#F0F2F5", fontSize: 14, width: "100%", outline: "none", boxSizing: "border-box", marginBottom: 12 },
     btn: { background: "linear-gradient(135deg, #22C55E, #16A34A)", border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
     toggle: { background: "none", border: "none", color: "#22C55E", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 16, textAlign: "center", width: "100%" },
@@ -178,7 +178,7 @@ function AuthScreen({ onAuth }) {
   return (
     <div style={s.container}>
       <div style={s.card}>
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
           <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 220, objectFit: "contain", margin: "0 auto", display: "block" }}
             onError={e => { e.target.style.display = "none"; }} />
         </div>
@@ -494,7 +494,7 @@ export default function FinanceDashboard() {
             width: 220px;
             background: #1A1D23;
             border-right: 1px solid #2A2E37;
-            padding: 24px 16px;
+            padding: 12px 16px;
             position: fixed;
             top: 0;
             left: 0;
@@ -504,7 +504,7 @@ export default function FinanceDashboard() {
           }
           .pf-outer { padding-left: 220px; }
           .pf-sidebar-logo {
-            margin-bottom: 24px;
+            margin-bottom: 10px;
             padding: 0 8px;
             text-align: center;
           }
