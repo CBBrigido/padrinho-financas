@@ -27,6 +27,7 @@ const api = {
   me: () => api.request("GET", "/api/auth/me"),
   // Transactions
   getTransactions: (month, year) => api.request("GET", `/api/transactions?month=${month}&year=${year}`),
+  getTransactionsByRange: (startDate, endDate) => api.request("GET", `/api/transactions?start_date=${startDate}&end_date=${endDate}`),
   createTransaction: (data) => api.request("POST", "/api/transactions", data),
   updateTransaction: (id, data) => api.request("PUT", `/api/transactions/${id}`, data),
   deleteTransaction: (id) => api.request("DELETE", `/api/transactions/${id}`),
@@ -202,6 +203,32 @@ function AuthScreen({ onAuth }) {
   );
 }
 
+// ─── Month Picker ────────────────────────────────────────────────────────
+function MonthPicker({ month, year, onChange, onClose }) {
+  const [pickerYear, setPickerYear] = useState(year);
+  return (
+    <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 8, background: "#1E2128", border: "1px solid #2A2E37", borderRadius: 14, padding: 16, zIndex: 1000, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", minWidth: 260 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <button onClick={() => setPickerYear(y => y - 1)} style={{ background: "none", border: "none", color: "#8E99A9", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>‹</button>
+        <span style={{ fontWeight: 700, color: "#F0F2F5", fontSize: 15 }}>{pickerYear}</span>
+        <button onClick={() => setPickerYear(y => y + 1)} style={{ background: "none", border: "none", color: "#8E99A9", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+        {MONTHS.map((m, i) => {
+          const active = i + 1 === month && pickerYear === year;
+          return (
+            <button key={m} onClick={() => { onChange(i + 1, pickerYear); onClose(); }}
+              style={{ background: active ? "#22C55E" : "#252830", border: "none", borderRadius: 8, padding: "8px 4px", color: active ? "#fff" : "#CDD2DA", fontWeight: active ? 700 : 500, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
+              {m}
+            </button>
+          );
+        })}
+      </div>
+      <button onClick={onClose} style={{ marginTop: 10, width: "100%", background: "none", border: "1px solid #2A2E37", borderRadius: 8, padding: "6px", color: "#8E99A9", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>Fechar</button>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ─────────────────────────────────────────────────────
 export default function FinanceDashboard() {
   const [user, setUser] = useState(null);
@@ -211,6 +238,10 @@ export default function FinanceDashboard() {
   const [summary, setSummary] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [filterMode, setFilterMode] = useState("mes");
+  const [startDate, setStartDate] = useState(() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-01`; });
+  const [endDate, setEndDate] = useState(() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`; });
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
@@ -244,21 +275,31 @@ export default function FinanceDashboard() {
     if (!user) return;
     setLoading(true);
     try {
-      const [txData, sumData, catData] = await Promise.all([
-        api.getTransactions(currentMonth, currentYear),
-        api.getSummary(currentMonth, currentYear),
-        api.getCategories(),
-      ]);
-      setTransactions(txData.transactions || []);
-      setSummary(sumData);
-      setCategories(catData.categories || []);
+      if (filterMode === "periodo") {
+        const [txData, catData] = await Promise.all([
+          api.getTransactionsByRange(startDate, endDate),
+          api.getCategories(),
+        ]);
+        setTransactions(txData.transactions || []);
+        setSummary(null);
+        setCategories(catData.categories || []);
+      } else {
+        const [txData, sumData, catData] = await Promise.all([
+          api.getTransactions(currentMonth, currentYear),
+          api.getSummary(currentMonth, currentYear),
+          api.getCategories(),
+        ]);
+        setTransactions(txData.transactions || []);
+        setSummary(sumData);
+        setCategories(catData.categories || []);
+      }
       setError("");
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [user, currentMonth, currentYear]);
+  }, [user, currentMonth, currentYear, filterMode, startDate, endDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -347,11 +388,11 @@ export default function FinanceDashboard() {
   };
 
   // ── Derived data ──
-  const totalReceita = summary?.current_month?.receita || 0;
-  const totalDespesa = summary?.current_month?.despesa || 0;
-  const totalReserva = summary?.current_month?.reserva || 0;
-  const saldo = summary?.current_month?.saldo || 0;
-  const overBudget = summary?.current_month?.over_budget || false;
+  const totalReceita = summary ? (summary?.current_month?.receita || 0) : transactions.filter(t => t.type === "receita").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalDespesa = summary ? (summary?.current_month?.despesa || 0) : transactions.filter(t => t.type === "despesa").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalReserva = summary ? (summary?.current_month?.reserva || 0) : transactions.filter(t => t.type === "reserva").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const saldo = totalReceita - totalDespesa - totalReserva;
+  const overBudget = totalDespesa + totalReserva > totalReceita;
   const catBreakdown = (summary?.category_breakdown || []).map(c => ({ id: c.id, label: c.name, color: c.color, value: c.total }));
   const monthComparison = (summary?.monthly_comparison || []).map(m => ({ label: MONTHS[m.month - 1], receita: m.receita, despesa: m.despesa, reserva: m.reserva || 0 }));
 
@@ -577,10 +618,36 @@ export default function FinanceDashboard() {
           <img src="/logo.png" alt="Padrinho Finanças" style={{ height: 52, objectFit: "contain", display: "block" }}
             onError={e => { e.target.style.display = "none"; }} />
         </div>
-        <div className="pf-header-month" style={s.monthNav}>
-          <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
-          <span className="pf-month-label" style={s.monthLabel}>{MONTHS[currentMonth - 1]} {currentYear}</span>
-          <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
+        <div className="pf-header-month" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Mode toggle */}
+          <div style={{ display: "flex", background: "#252830", borderRadius: 10, border: "1px solid #2A2E37", overflow: "hidden" }}>
+            <button onClick={() => setFilterMode("mes")} style={{ background: filterMode === "mes" ? "#22C55E" : "none", border: "none", color: filterMode === "mes" ? "#fff" : "#8E99A9", padding: "6px 12px", cursor: "pointer", fontWeight: 600, fontSize: 12, fontFamily: "inherit" }}>Mês</button>
+            <button onClick={() => setFilterMode("periodo")} style={{ background: filterMode === "periodo" ? "#22C55E" : "none", border: "none", color: filterMode === "periodo" ? "#fff" : "#8E99A9", padding: "6px 12px", cursor: "pointer", fontWeight: 600, fontSize: 12, fontFamily: "inherit" }}>Período</button>
+          </div>
+
+          {filterMode === "mes" ? (
+            <div style={{ ...s.monthNav, position: "relative" }}>
+              <button style={s.navBtn} onClick={() => navigateMonth(-1)}><Icons.ChevronLeft /></button>
+              <span className="pf-month-label" style={{ ...s.monthLabel, cursor: "pointer", userSelect: "none" }} onClick={() => setShowMonthPicker(v => !v)}>
+                {MONTHS[currentMonth - 1]} {currentYear}
+              </span>
+              <button style={s.navBtn} onClick={() => navigateMonth(1)}><Icons.ChevronRight /></button>
+              {showMonthPicker && (
+                <MonthPicker month={currentMonth} year={currentYear}
+                  onChange={(m, y) => { setCurrentMonth(m); setCurrentYear(y); }}
+                  onClose={() => setShowMonthPicker(false)} />
+              )}
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#1E2128", borderRadius: 12, padding: "6px 10px", border: "1px solid #2A2E37", flexWrap: "wrap" }}>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer" }} />
+              <span style={{ color: "#8E99A9", fontSize: 12 }}>até</span>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer" }} />
+              <button onClick={fetchData} style={{ background: "#22C55E", border: "none", borderRadius: 8, padding: "4px 10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Filtrar</button>
+            </div>
+          )}
         </div>
         <div className="pf-header-actions">
           <div style={s.userBadge}><Icons.User /> {user.name?.split(" ")[0]}</div>
@@ -710,7 +777,7 @@ export default function FinanceDashboard() {
       {/* ═══════ TRANSACTIONS ═══════ */}
       {activeTab === "transactions" && (
         <div style={s.card}>
-          <div style={s.sectionTitle}>Transações — {MONTHS[currentMonth - 1]} {currentYear}</div>
+          <div style={s.sectionTitle}>Transações — {filterMode === "periodo" ? `${startDate.split("-").reverse().join("/")} a ${endDate.split("-").reverse().join("/")}` : `${MONTHS[currentMonth - 1]} ${currentYear}`}</div>
           <div style={s.filterBar}>
             <Icons.Filter />
             <select style={s.select} value={filterType} onChange={e => setFilterType(e.target.value)}>
