@@ -649,11 +649,11 @@ export default function FinanceDashboard() {
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#1E2128", borderRadius: 12, padding: "6px 10px", border: "1px solid #2A2E37", flexWrap: "wrap" }}>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer", width: "100%", colorScheme: "dark" }}
+                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer", colorScheme: "dark" }}
                 className="pf-date-input" />
               <span style={{ color: "#8E99A9", fontSize: 12 }}>até</span>
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer", width: "100%", colorScheme: "dark" }}
+                style={{ background: "transparent", border: "none", color: "#F0F2F5", fontSize: 13, outline: "none", cursor: "pointer", colorScheme: "dark" }}
                 className="pf-date-input" />
               <button onClick={fetchData} style={{ background: "#22C55E", border: "none", borderRadius: 8, padding: "4px 10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Filtrar</button>
             </div>
