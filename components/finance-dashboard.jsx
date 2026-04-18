@@ -694,7 +694,7 @@ export default function FinanceDashboard() {
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: tx.type === "receita" ? "#22C55E" : tx.type === "reserva" ? "#F59E0B" : "#E8575A", flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.description}</div>
-                    <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
+                    <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}</div>
                   </div>
                 </div>
                 {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
@@ -734,7 +734,7 @@ export default function FinanceDashboard() {
                     {tx.description}
                     {tx.is_fixed && <span style={{ ...s.badge, background: "#3EAFC422", color: "#3EAFC4", marginLeft: 8 }}>Fixa</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date).toLocaleDateString("pt-BR")}</div>
+                  <div style={{ fontSize: 11, color: "#8E99A9" }}>{new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}</div>
                 </div>
               </div>
               {tx.category_name && <span className="pf-tx-cat" style={s.tag(tx.category_color || "#8E99A9")}>{tx.category_name}</span>}
