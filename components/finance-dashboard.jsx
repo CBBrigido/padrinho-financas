@@ -1064,7 +1064,7 @@ export default function FinanceDashboard() {
                 onClick={() => setForm(f => ({
                   ...f,
                   type: key,
-                  category_id: key === "reserva" && reservaCategory ? String(reservaCategory.id) : f.category_id,
+                  category_id: key === "reserva" && categories.find(c => c.name === "Reserva") ? String(categories.find(c => c.name === "Reserva").id) : f.category_id,
                 }))}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid", cursor: "pointer", fontWeight: 700, fontSize: 13,
